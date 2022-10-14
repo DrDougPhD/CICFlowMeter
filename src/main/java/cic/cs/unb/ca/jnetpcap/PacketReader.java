@@ -13,6 +13,7 @@ import org.jnetpcap.protocol.network.Ip4;
 import org.jnetpcap.protocol.network.Ip6;
 import org.jnetpcap.protocol.tcpip.Tcp;
 import org.jnetpcap.protocol.tcpip.Udp;
+import  org.jnetpcap.protocol.sigtran.Sctp;
 import org.jnetpcap.protocol.network.Icmp;
 import org.jnetpcap.protocol.vpn.L2TP;
 import org.slf4j.Logger;
@@ -30,6 +31,7 @@ public class PacketReader {
 	private Tcp  tcp;
 	private Udp  udp;
 	private Icmp icmp;
+	private Sctp sctp;
 	private Ip4  ipv4;
 	private Ip6  ipv6;
 	private L2TP l2tp;
@@ -69,6 +71,7 @@ public class PacketReader {
 			this.tcp = new Tcp();
 			this.udp = new Udp();
 			this.icmp = new Icmp();
+			this.sctp = new Sctp();
 			this.ipv4 = new Ip4();
 			this.ipv6 = new Ip6();
 			this.l2tp = new L2TP();
@@ -76,7 +79,7 @@ public class PacketReader {
 			buf = new JBuffer(JMemory.POINTER);		
 		}		
 	}
-	
+
 	public BasicPacketInfo nextPacket(){
 		 PcapPacket      packet;
 		 BasicPacketInfo packetInfo = null;
@@ -157,13 +160,18 @@ public class PacketReader {
 					packetInfo.setPayloadBytes(udp.getPayloadLength());
 					packetInfo.setHeaderBytes(udp.getHeaderLength());
 					packetInfo.setProtocol(ProtocolEnum.UDP);
-				}else {
+				}else if(packet.hasHeader(this.sctp)){
+					packetInfo.setSrcPort(sctp.source());
+					packetInfo.setDstPort(sctp.destination());
+					packetInfo.setPayloadBytes(sctp.getPayloadLength());
+					packetInfo.setHeaderBytes(sctp.getHeaderLength());
+					packetInfo.setProtocol(ProtocolEnum.SCTP);
+			}else {
 					/*logger.debug("other packet Ethernet -> {}"+  packet.hasHeader(new Ethernet()));
 					logger.debug("other packet Html     -> {}"+  packet.hasHeader(new Html()));
 					logger.debug("other packet Http     -> {}"+  packet.hasHeader(new Http()));
 					logger.debug("other packet SLL      -> {}"+  packet.hasHeader(new SLL()));
 					logger.debug("other packet L2TP     -> {}"+  packet.hasHeader(new L2TP()));
-					logger.debug("other packet Sctp     -> {}"+  packet.hasHeader(new Sctp()));
 					logger.debug("other packet PPP      -> {}"+  packet.hasHeader(new PPP()));*/
 
 					int headerCount = packet.getHeaderCount();
