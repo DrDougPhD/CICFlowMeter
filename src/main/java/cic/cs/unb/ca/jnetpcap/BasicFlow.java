@@ -247,7 +247,12 @@ public class BasicFlow {
                 }
             } else {
                 this.bwdPktStats.addValue((double) packet.getPayloadBytes());
-                Init_Win_bytes_backward = packet.getTCPWindow();
+                // set Init_win_bytes_backward if not been set. The set logic isn't 100%
+                // accurate, since it technically takes the first non-zero value, but should
+                // be good enough for most cases.
+                if (Init_Win_bytes_backward == 0) {
+                    Init_Win_bytes_backward = packet.getTCPWindow();
+                }
                 this.bHeaderBytes += packet.getHeaderBytes();
                 this.backward.add(packet);
                 this.backwardBytes += packet.getPayloadBytes();
