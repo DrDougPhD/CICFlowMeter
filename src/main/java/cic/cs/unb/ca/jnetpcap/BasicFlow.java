@@ -382,24 +382,24 @@ public class BasicFlow {
         }
     }
 
-    public long getSflow_fbytes() {
+    public double getSflow_fbytes() {
         if (sfCount <= 0) return 0;
-        return this.forwardBytes / sfCount;
+        return (double) this.forwardBytes / sfCount;
     }
 
-    public long getSflow_fpackets() {
+    public double getSflow_fpackets() {
         if (sfCount <= 0) return 0;
-        return this.forward.size() / sfCount;
+        return (double) this.forward.size() / sfCount;
     }
 
-    public long getSflow_bbytes() {
+    public double getSflow_bbytes() {
         if (sfCount <= 0) return 0;
-        return this.backwardBytes / sfCount;
+        return (double) this.backwardBytes / sfCount;
     }
 
-    public long getSflow_bpackets() {
+    public double getSflow_bpackets() {
         if (sfCount <= 0) return 0;
-        return this.backward.size() / sfCount;
+        return (double) this.backward.size() / sfCount;
     }
 
     void detectUpdateSubflows(BasicPacketInfo packet) {
@@ -535,25 +535,25 @@ public class BasicFlow {
 
 
     //Client average bytes per bulk
-    public long fAvgBytesPerBulk() {
+    public double fAvgBytesPerBulk() {
         if (this.fbulkStateCount() != 0)
-            return (this.fbulkSizeTotal() / this.fbulkStateCount());
+            return ((double) this.fbulkSizeTotal() / this.fbulkStateCount());
         return 0;
     }
 
 
     //Client average packets per bulk
-    public long fAvgPacketsPerBulk() {
+    public double fAvgPacketsPerBulk() {
         if (this.fbulkStateCount() != 0)
-            return (this.fbulkPacketCount() / this.fbulkStateCount());
+            return ((double) this.fbulkPacketCount() / this.fbulkStateCount());
         return 0;
     }
 
 
     //Client average bulk rate
-    public long fAvgBulkRate() {
+    public double fAvgBulkRate() {
         if (this.fbulkDuration() != 0)
-            return (long) (this.fbulkSizeTotal() / this.fbulkDurationInSecond());
+            return ((double) this.fbulkSizeTotal() / this.fbulkDurationInSecond());
         return 0;
     }
 
@@ -580,23 +580,23 @@ public class BasicFlow {
     }
 
     //Server average bytes per bulk
-    public long bAvgBytesPerBulk() {
+    public double bAvgBytesPerBulk() {
         if (this.bbulkStateCount() != 0)
-            return (this.bbulkSizeTotal() / this.bbulkStateCount());
+            return ((double) this.bbulkSizeTotal() / this.bbulkStateCount());
         return 0;
     }
 
     //Server average packets per bulk
-    public long bAvgPacketsPerBulk() {
+    public double bAvgPacketsPerBulk() {
         if (this.bbulkStateCount() != 0)
-            return (this.bbulkPacketCount() / this.bbulkStateCount());
+            return ((double) this.bbulkPacketCount() / this.bbulkStateCount());
         return 0;
     }
 
     //Server average bulk rate
-    public long bAvgBulkRate() {
+    public double bAvgBulkRate() {
         if (this.bbulkDuration() != 0)
-            return (long) (this.bbulkSizeTotal() / this.bbulkDurationInSecond());
+            return ((double) this.bbulkSizeTotal() / this.bbulkDurationInSecond());
         return 0;
     }
 
