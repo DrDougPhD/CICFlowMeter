@@ -110,11 +110,17 @@ public class FlowGenerator {
 
                 // If the original flow is set for termination, or the flow is not a tcp connection, create a new flow
                 // Having a SYN packet and no ACK packet means it's the first packet in a new flow
-                if (((flow.getTcpFlowState() == TcpFlowState.READY_FOR_TERMINATION) && packet.hasFlagSYN() && !packet.hasFlagACK())
+                if ((flow.getTcpFlowState() == TcpFlowState.READY_FOR_TERMINATION && packet.hasFlagSYN())
                         || packet.getProtocol() != ProtocolEnum.TCP) {
-                    // create new flow, don't switch direction
-                    currentFlows.put(id, new BasicFlow(bidirectional,packet,packet.getSrc(),packet.getDst(),packet.getSrcPort(),
-                    packet.getDstPort(), this.flowActivityTimeOut));
+                    if(packet.hasFlagSYN() && packet.hasFlagACK()) {
+                        // create new flow, switch direction - we assume the PCAP file had a mistake where SYN-ACK arrived before SYN packet
+                        currentFlows.put(id, new BasicFlow(bidirectional,packet,packet.getDst(),packet.getSrc(),packet.getDstPort(),
+                                packet.getSrcPort(), this.flowActivityTimeOut));
+                    } else {
+                        // Packet only has SYN, no ACK
+                        currentFlows.put(id, new BasicFlow(bidirectional,packet,packet.getSrc(),packet.getDst(),packet.getSrcPort(),
+                                packet.getDstPort(), this.flowActivityTimeOut));
+                    }
                 } else {
                   // Otherwise, the previous flow was likely terminated because of a timeout, and the new flow has to
                   // maintain the same source and destination information as the previous flow (since they're part of the
@@ -199,7 +205,14 @@ public class FlowGenerator {
                 currentFlows.put(id, flow);
             }
         } else {
-            currentFlows.put(packet.fwdFlowId(), new BasicFlow(bidirectional, packet, this.flowActivityTimeOut));
+
+            if(packet.hasFlagSYN() && packet.hasFlagACK()){
+                currentFlows.put(packet.bwdFlowId(), new BasicFlow(bidirectional,packet,packet.getDst(),packet.getSrc(),packet.getDstPort(),
+                        packet.getSrcPort(), this.flowActivityTimeOut));
+            }
+            else {
+                currentFlows.put(packet.fwdFlowId(), new BasicFlow(bidirectional, packet, this.flowActivityTimeOut));
+            }
         }
     }
 
