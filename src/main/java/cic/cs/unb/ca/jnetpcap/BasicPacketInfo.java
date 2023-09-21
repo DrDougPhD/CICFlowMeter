@@ -32,6 +32,8 @@ public class BasicPacketInfo {
 	private int icmpCode = -1;
 	private int icmpType = -1;
 
+	private TcpRetransmissionDTO tcpRetransmissionDTO;
+
 	public BasicPacketInfo(byte[] src, byte[] dst, int srcPort, int dstPort,
 			ProtocolEnum protocol, long timeStamp, IdGenerator generator) {
 		super();
@@ -271,5 +273,13 @@ public class BasicPacketInfo {
 
 	public void setIcmpType(int icmpType) {
 		this.icmpType = icmpType;
+	}
+
+	public TcpRetransmissionDTO tcpRetransmissionDTO(){
+		return this.tcpRetransmissionDTO;
+	}
+
+	public void setTcpRetransmissionDTO(TcpRetransmissionDTO tcpRetransmissionDTO) {
+		this.tcpRetransmissionDTO = tcpRetransmissionDTO;
 	}
 }
