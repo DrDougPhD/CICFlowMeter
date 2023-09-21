@@ -1198,12 +1198,19 @@ public class BasicFlow {
             dump.append(0).append(separator);
             dump.append(0).append(separator);
         }
-        dump.append(((double) (forwardBytes + backwardBytes)) / ((double) flowDuration / 1000000L)).append(separator);//21
-        dump.append(((double) packetCount()) / ((double) flowDuration / 1000000L)).append(separator);//22
-        dump.append(flowIAT.getMean()).append(separator);                            //23
-        dump.append(flowIAT.getStandardDeviation()).append(separator);                //24
-        dump.append(flowIAT.getMax()).append(separator);                            //25
-        dump.append(flowIAT.getMin()).append(separator);                            //26
+
+        if(flowDuration != 0){
+            dump.append(((double) (forwardBytes + backwardBytes)) / ((double) flowDuration / 1000000L)).append(separator); //21
+            dump.append(((double) packetCount()) / ((double) flowDuration / 1000000L)).append(separator); // 22
+        }else{
+            dump.append(-1).append(separator);
+            dump.append(-1).append(separator);
+        }
+
+        dump.append(Double.isNaN(flowIAT.getMean()) ? 0 : flowIAT.getMean()).append(separator);  // 23
+        dump.append(Double.isNaN(flowIAT.getStandardDeviation()) ? 0 : flowIAT.getStandardDeviation()).append(separator); //24
+        dump.append(Double.isNaN(flowIAT.getMax()) ? 0 : flowIAT.getMax()).append(separator);    //25
+        dump.append(Double.isNaN(flowIAT.getMin()) ? 0 : flowIAT.getMin()).append(separator);                         //26
 
         if (this.forward.size() > 1) {
             dump.append(forwardIAT.getSum()).append(separator);                        //27
