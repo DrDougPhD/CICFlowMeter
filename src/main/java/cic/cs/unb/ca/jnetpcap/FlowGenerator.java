@@ -7,9 +7,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Set;
+import java.util.*;
 
 import static cic.cs.unb.ca.jnetpcap.Utils.LINE_SEP;
 
@@ -49,6 +47,8 @@ public class FlowGenerator {
     private long flowActivityTimeOut;
     private int finishedFlowCount;
 
+    private static final List<ProtocolEnum> TCP_UDP_LIST_FILTER = Arrays.asList(ProtocolEnum.TCP, ProtocolEnum.UDP);
+
     public FlowGenerator(boolean bidirectional, long flowTimeout, long activityTimeout) {
         super();
         this.bidirectional = bidirectional;
@@ -85,7 +85,8 @@ public class FlowGenerator {
                 id = packet.bwdFlowId();
             }
 
-            flow = currentFlows.get(id);
+            flow = currentFlows.get(id); //The existing (original flow) that the packet is associated with
+
             // Flow finished due flowtimeout:
             // 1.- we move the flow to finished flow list
             // 2.- we eliminate the flow from the current flow list
@@ -94,10 +95,10 @@ public class FlowGenerator {
                     ((flow.getTcpFlowState() == TcpFlowState.READY_FOR_TERMINATION) && packet.hasFlagSYN())) {
 
                 // set cumulative flow time if TCP packet
-                if (flow.getProtocol() == ProtocolEnum.TCP) {
-                    long currDuration = flow.getCumulativeTcpConnectionDuration();
+                if(TCP_UDP_LIST_FILTER.contains(flow.getProtocol())) {
+                    long currDuration = flow.getCumulativeConnectionDuration();
                     currDuration += flow.getFlowDuration();
-                    flow.setCumulativeTcpConnectionDuration(currDuration);
+                    flow.setCumulativeConnectionDuration(currDuration);
                 }
 
                 if (mListener != null) {
@@ -106,12 +107,25 @@ public class FlowGenerator {
                     finishedFlows.put(getFlowCount(), flow);
                     //flow.endActiveIdleTime(currentTimestamp,this.flowActivityTimeOut, this.flowTimeOut, false);
                 }
-                currentFlows.remove(id);
+                currentFlows.remove(id);  // Remove the expired flow from the current flow list
 
-                // If the original flow is set for termination, or the flow is not a tcp connection, create a new flow
+                // Create a new UDP flow if activity time difference between the current UDP packet, and the last
+                // packet in the previous flow is greater than the flow activity timeout. This is to soften the issue
+                // with hard separation UDP flows that are likely part of the same "dialogue", which can lead to single
+                // packet flows with the hard flow time out cutoff. The concept of a "dialogue" is not well-defined in
+                // UDP, like TCP, so we assume that if the activity time difference between the current packet and the
+                // last packet in the previous flow is greater than the flow activity timeout, then the current packet
+                // is part of a new "dialogue".
+                boolean createNewUdpFlow =
+                        (flow.getProtocol() == ProtocolEnum.UDP && currentTimestamp - flow.getLastSeen() > this.flowTimeOut);
+
+                // If the original flow is set for termination, or the flow is not a tcp connection, create a new flow,
+                // and place it into the currentFlows list
                 // Having a SYN packet and no ACK packet means it's the first packet in a new flow
-                if ((flow.getTcpFlowState() == TcpFlowState.READY_FOR_TERMINATION && packet.hasFlagSYN())
-                        || packet.getProtocol() != ProtocolEnum.TCP) {
+                if ((flow.getTcpFlowState() == TcpFlowState.READY_FOR_TERMINATION && packet.hasFlagSYN())      // tcp flow is ready for termination
+                        || createNewUdpFlow                                                                    // udp packet is not part of current "dialogue"
+                        || !TCP_UDP_LIST_FILTER.contains(packet.getProtocol())                                 // other protocols
+                ) {
                     if(packet.hasFlagSYN() && packet.hasFlagACK()) {
                         // create new flow, switch direction - we assume the PCAP file had a mistake where SYN-ACK arrived before SYN packet
                         currentFlows.put(id, new BasicFlow(bidirectional,packet,packet.getDst(),packet.getSrc(),packet.getDstPort(),
@@ -124,14 +138,14 @@ public class FlowGenerator {
                 } else {
                   // Otherwise, the previous flow was likely terminated because of a timeout, and the new flow has to
                   // maintain the same source and destination information as the previous flow (since they're part of the
-                  // same TCP connection).
+                  // same TCP connection or UDP "dialogue".
                     BasicFlow newFlow = new BasicFlow(bidirectional,packet,flow.getSrc(),flow.getDst(),flow.getSrcPort(),
                             flow.getDstPort(), this.flowActivityTimeOut);
 
-                    long currDuration = flow.getCumulativeTcpConnectionDuration();
+                    long currDuration = flow.getCumulativeConnectionDuration();
                     // get the gap between the last flow and the start of this flow
                     currDuration += (currentTimestamp - flow.getLastSeen());
-                    newFlow.setCumulativeTcpConnectionDuration(currDuration);
+                    newFlow.setCumulativeConnectionDuration(currDuration);
                     // Create a link to the previous tcp flow, this is required so that the final tcp flow duration
                     // can be set correctly.
                     newFlow.setPreviousTcpFlow(flow);
@@ -204,7 +218,7 @@ public class FlowGenerator {
                 flow.addPacket(packet);
                 currentFlows.put(id, flow);
             }
-        } else {
+        } else { // not part of an existing flow
 
             if(packet.hasFlagSYN() && packet.hasFlagACK()){
                 currentFlows.put(packet.bwdFlowId(), new BasicFlow(bidirectional,packet,packet.getDst(),packet.getSrc(),packet.getDstPort(),
@@ -312,8 +326,8 @@ public class FlowGenerator {
             for (BasicFlow flow : currentFlows.values()) {
                 if (flow.packetCount() >= 1) {
 
-                    if (flow.getProtocol() == ProtocolEnum.TCP) {
-                        flow = updateTcpCxnDuration(flow);
+                    if (TCP_UDP_LIST_FILTER.contains(flow.getProtocol())) {
+                        flow = updateTcpUdpCxnDuration(flow);
                     }
 
                     output.write((flow.dumpFlowBasedFeaturesEx() + LINE_SEP).getBytes());
@@ -339,11 +353,11 @@ public class FlowGenerator {
     }
 
 
-    private BasicFlow updateTcpCxnDuration(BasicFlow tcpFlow) {
-        long currDuration = tcpFlow.getCumulativeTcpConnectionDuration();
-        currDuration += tcpFlow.getFlowDuration();
-        tcpFlow.setCumulativeTcpConnectionDuration(currDuration);
-        return tcpFlow;
+    private BasicFlow updateTcpUdpCxnDuration(BasicFlow tcpUdpFlow) {
+        long currDuration = tcpUdpFlow.getCumulativeConnectionDuration();
+        currDuration += tcpUdpFlow.getFlowDuration();
+        tcpUdpFlow.setCumulativeConnectionDuration(currDuration);
+        return tcpUdpFlow;
     }
 
     private int getFlowCount() {

@@ -100,7 +100,7 @@ public enum FlowFeature {
     icmp_code("ICMP Code", "IcmpC"),            // 86
     icmp_type("ICMP Type", "IcmpT"),            // 87
 
-    cum_tcp_time("Total TCP Flow Time", "TTFT"), //88
+    cum_cnx_time("Total Connection Flow Time", "TCFT"), //88
 	
 	Label("Label","LBL",new String[]{"NeedManualLabel"});	//89
 
