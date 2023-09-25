@@ -167,6 +167,24 @@ public class PacketReader {
 					packetInfo.setHeaderBytes(sctp.getHeaderLength());
 					packetInfo.setProtocol(ProtocolEnum.SCTP);
 			}else {
+
+					Ip4.Ip4Type ip4Type = this.ipv4.typeEnum();
+
+					switch (ip4Type) {
+						case IGMP:
+							packetInfo.setProtocol(ProtocolEnum.IGMP);
+							break;
+						default:
+							/** Note, we are not supporting all protocols, just the ones we are interested in, and adding
+							    them as desired. To be considered at a future point, if we want to include a lot more protocols,
+							    it may be a lot cleaner to just use the Ip4.Ip4Type enum directly.
+							 */
+							logger.debug("Currently unsupported Ip4 protocol: {} --description: {} ", ip4Type.name(), ip4Type.getDescription());
+							break;
+					}
+
+
+
 					/*logger.debug("other packet Ethernet -> {}"+  packet.hasHeader(new Ethernet()));
 					logger.debug("other packet Html     -> {}"+  packet.hasHeader(new Html()));
 					logger.debug("other packet Http     -> {}"+  packet.hasHeader(new Http()));
@@ -174,12 +192,12 @@ public class PacketReader {
 					logger.debug("other packet L2TP     -> {}"+  packet.hasHeader(new L2TP()));
 					logger.debug("other packet PPP      -> {}"+  packet.hasHeader(new PPP()));*/
 
-					int headerCount = packet.getHeaderCount();
-					for(int i=0;i<headerCount;i++) {
-						JHeader header = JHeaderPool.getDefault().getHeader(i);
-						//JHeader hh = packet.getHeaderByIndex(i, header);
-						//logger.debug("getIpv4Info: {} --description: {} ",header.getName(),header.getDescription());
-					}
+//					int headerCount = packet.getHeaderCount();
+//					for(int i=0;i<headerCount;i++) {
+//						JHeader header = JHeaderPool.getDefault().getHeader(i);
+//						//JHeader hh = packet.getHeaderByIndex(i, header);
+//						//logger.debug("getIpv4Info: {} --description: {} ",header.getName(),header.getDescription());
+//					}
 				}
 			}
 		} catch (Exception e) {
