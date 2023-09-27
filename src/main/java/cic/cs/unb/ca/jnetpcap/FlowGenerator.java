@@ -126,15 +126,12 @@ public class FlowGenerator {
                   // maintain the same source and destination information as the previous flow (since they're part of the
                   // same TCP connection).
                     BasicFlow newFlow = new BasicFlow(bidirectional,packet,flow.getSrc(),flow.getDst(),flow.getSrcPort(),
-                            flow.getDstPort(), this.flowActivityTimeOut);
+                            flow.getDstPort(), this.flowActivityTimeOut, flow.getTcpPacketsSeen());
 
                     long currDuration = flow.getCumulativeTcpConnectionDuration();
                     // get the gap between the last flow and the start of this flow
                     currDuration += (currentTimestamp - flow.getLastSeen());
                     newFlow.setCumulativeTcpConnectionDuration(currDuration);
-                    // Create a link to the previous tcp flow, this is required so that the final tcp flow duration
-                    // can be set correctly.
-                    newFlow.setPreviousTcpFlow(flow);
                     currentFlows.put(id, newFlow);
                 }
 

@@ -8,6 +8,7 @@ import org.jnetpcap.nio.JMemory;
 import org.jnetpcap.packet.JHeader;
 import org.jnetpcap.packet.JHeaderPool;
 import org.jnetpcap.packet.PcapPacket;
+import org.jnetpcap.packet.format.FormatUtils;
 import org.jnetpcap.protocol.lan.Ethernet;
 import org.jnetpcap.protocol.network.Ip4;
 import org.jnetpcap.protocol.network.Ip6;
@@ -154,6 +155,12 @@ public class PacketReader {
 					packetInfo.setFlagRST(tcp.flags_RST());
 					packetInfo.setPayloadBytes(tcp.getPayloadLength());
 					packetInfo.setHeaderBytes(tcp.getHeaderLength());
+
+					TcpRetransmissionDTO tcpRetransmissionDTO = new TcpRetransmissionDTO(
+							this.ipv4.source(), tcp.seq(), tcp.ack(), tcp.getPayloadLength(),
+							tcp.window(), packet.getCaptureHeader().timestampInMicros());
+					packetInfo.setTcpRetransmissionDTO(tcpRetransmissionDTO);
+
 				}else if(packet.hasHeader(this.udp)){
 					packetInfo.setSrcPort(udp.source());
 					packetInfo.setDstPort(udp.destination());
