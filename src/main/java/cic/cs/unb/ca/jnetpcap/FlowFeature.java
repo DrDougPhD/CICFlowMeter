@@ -103,7 +103,9 @@ public enum FlowFeature {
     fwd_tcp_retrans("Fwd TCP Retrans. Count", "FwTcpRt"), //88
     bwd_tcp_retrans("Bwd TCP Retrans. Count", "BwTcpRt"), //89
     total_tcp_retrans("Total TCP Retrans. Count", "TotalTcpRt"), //90
-    cum_cnx_time("Total Connection Flow Time", "TCFT"), //91
+
+    cum_tcp_time("Total TCP Flow Time", "TTFT"), //91
+	
 	Label("Label","LBL",new String[]{"NeedManualLabel"});	//92
 
 
