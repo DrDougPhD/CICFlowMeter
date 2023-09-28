@@ -87,7 +87,7 @@ public class BasicFlow {
     // The flow timeout is dependent on the user configuration and is unable to capture proper
     // context in extended TCP connections. This field will help identify whether a flow is
     // part of an extended TCP connection.
-    private long cumulativeTcpConnectionDuration;
+    private long cumulativeConnectionDuration;
 
     //To keep track of TCP connection teardown, or an RST packet in one direction.
     private TcpFlowState tcpFlowState;
@@ -168,7 +168,7 @@ public class BasicFlow {
         this.bFIN_cnt = 0;
         this.fHeaderBytes = 0L;
         this.bHeaderBytes = 0L;
-        this.cumulativeTcpConnectionDuration = 0L;
+        this.cumulativeConnectionDuration = 0L;
         this.tcpFlowState = null;
         this.tcpPacketsSeen = new HashSet<TcpRetransmissionDTO>();
     }
@@ -1172,12 +1172,12 @@ public class BasicFlow {
         this.tcpFlowState = state;
     }
 
-    public long getCumulativeTcpConnectionDuration() {
-        return this.cumulativeTcpConnectionDuration;
+    public long getCumulativeConnectionDuration() {
+        return this.cumulativeConnectionDuration;
     }
 
-    public void setCumulativeTcpConnectionDuration(long cumTcpDuration) {
-        this.cumulativeTcpConnectionDuration = cumTcpDuration;
+    public void setCumulativeConnectionDuration(long cumTcpDuration) {
+        this.cumulativeConnectionDuration = cumTcpDuration;
     }
 
     public Set<TcpRetransmissionDTO> getTcpPacketsSeen() {
@@ -1391,9 +1391,8 @@ public class BasicFlow {
         dump.append(bwdTcpRetransCnt).append(separator);                                    // 89
         dump.append(fwdTcpRetransCnt+bwdTcpRetransCnt).append(separator);                                    // 90
 
-        dump.append(cumulativeTcpConnectionDuration).append(separator);             //91
+        dump.append(cumulativeConnectionDuration).append(separator);             //91
         dump.append(getLabel());                                                    //92
-
 
         return dump.toString();
     }
