@@ -36,7 +36,9 @@ public class BasicFlow {
     private int bFIN_cnt;
 
     private long Act_data_pkt_forward;
+    private long Act_data_pkt_backward;
     private long min_seg_size_forward;
+    private long min_seg_size_backward;
     private int Init_Win_bytes_forward = 0;
     private int Init_Win_bytes_backward = 0;
 
@@ -159,7 +161,7 @@ public class BasicFlow {
     }
 
     public void firstPacket(BasicPacketInfo packet) {
-        
+
         if (this.src == null) {
             this.src = packet.getSrc();
             this.srcPort = packet.getSrcPort();
@@ -187,6 +189,9 @@ public class BasicFlow {
             this.forwardLastSeen = packet.getTimeStamp();
             this.forwardBytes += packet.getPayloadBytes();
             this.forward.add(packet);
+            if (packet.getPayloadBytes() >= 1) {
+                this.Act_data_pkt_forward++;
+            }
             if (packet.hasFlagPSH()) {
                 this.fPSH_cnt++;
             }
@@ -194,12 +199,16 @@ public class BasicFlow {
                 this.fURG_cnt++;
             }
         } else {
+            this.min_seg_size_backward = packet.getHeaderBytes();
             Init_Win_bytes_backward = packet.getTCPWindow();
             this.bwdPktStats.addValue((double) packet.getPayloadBytes());
             this.bHeaderBytes = packet.getHeaderBytes();
             this.backwardLastSeen = packet.getTimeStamp();
             this.backwardBytes += packet.getPayloadBytes();
             this.backward.add(packet);
+            if (packet.getPayloadBytes() >= 1) {
+                this.Act_data_pkt_backward++;
+            }
             if (packet.hasFlagPSH()) {
                 this.bPSH_cnt++;
             }
@@ -246,6 +255,9 @@ public class BasicFlow {
                     this.fRST_cnt++;
                 }
             } else {
+                if (packet.getPayloadBytes() >= 1) {
+                    this.Act_data_pkt_backward++;
+                }
                 this.bwdPktStats.addValue((double) packet.getPayloadBytes());
                 // set Init_win_bytes_backward if not been set. The set logic isn't 100%
                 // accurate, since it technically takes the first non-zero value, but should
@@ -259,6 +271,7 @@ public class BasicFlow {
                 if (this.backward.size() > 1)
                     this.backwardIAT.addValue(currentTimestamp - this.backwardLastSeen);
                 this.backwardLastSeen = currentTimestamp;
+                this.min_seg_size_backward = Math.min(packet.getHeaderBytes(), this.min_seg_size_backward);
                 if (packet.hasFlagPSH()) {
                     this.bPSH_cnt++;
                 }
@@ -736,7 +749,9 @@ public class BasicFlow {
         dump += this.Init_Win_bytes_forward + ",";
         dump += this.Init_Win_bytes_backward + ",";
         dump += this.Act_data_pkt_forward + ",";
+        dump += this.Act_data_pkt_forward + ",";
         dump += this.min_seg_size_forward + ",";
+        dump += this.min_seg_size_backward + ",";
 
         if (this.flowActive.getN() > 0) {
             dump += this.flowActive.getMean() + ",";
@@ -1074,8 +1089,16 @@ public class BasicFlow {
         return Act_data_pkt_forward;
     }
 
+    public long getAct_data_pkt_backward() {
+        return Act_data_pkt_backward;
+    }
+
     public long getmin_seg_size_forward() {
         return min_seg_size_forward;
+    }
+
+    public long getmin_seg_size_backward() {
+        return min_seg_size_backward;
     }
 
     public double getActiveMean() {
@@ -1146,7 +1169,7 @@ public class BasicFlow {
     public String getLabel() {
         //the original is "|". I think it should be "||" need to check,
 		/*if(FormatUtils.ip(src).equals("147.32.84.165") || FormatUtils.ip(dst).equals("147.32.84.165")){
-			return "BOTNET";													
+			return "BOTNET";
 		}
 		else{
 			return "BENIGN";
@@ -1259,7 +1282,7 @@ public class BasicFlow {
             dump.append(0).append(separator);
             dump.append(0).append(separator);
         }
-		
+
 		/*for(MutableInt v:flagCounts.values()) {
 			dump.append(v).append(separator);
 		}
@@ -1295,15 +1318,17 @@ public class BasicFlow {
 
         dump.append(Init_Win_bytes_forward).append(separator);                        //74
         dump.append(Init_Win_bytes_backward).append(separator);                        //75
-        dump.append(Act_data_pkt_forward).append(separator);                        //76
-        dump.append(min_seg_size_forward).append(separator);                        //77
+        dump.append(Act_data_pkt_forward).append(separator);                            //76
+        dump.append(Act_data_pkt_backward).append(separator);                           //77
+        dump.append(min_seg_size_forward).append(separator);                        //78
+        dump.append(min_seg_size_backward).append(separator);                       //79
 
 
         if (this.flowActive.getN() > 0) {
-            dump.append(flowActive.getMean()).append(separator);                    //78
-            dump.append(flowActive.getStandardDeviation()).append(separator);        //79
-            dump.append(flowActive.getMax()).append(separator);                        //80
-            dump.append(flowActive.getMin()).append(separator);                        //81
+            dump.append(flowActive.getMean()).append(separator);                    //80
+            dump.append(flowActive.getStandardDeviation()).append(separator);        //81
+            dump.append(flowActive.getMax()).append(separator);                        //82
+            dump.append(flowActive.getMin()).append(separator);                        //83
         } else {
             dump.append(0).append(separator);
             dump.append(0).append(separator);
@@ -1312,10 +1337,10 @@ public class BasicFlow {
         }
 
         if (this.flowIdle.getN() > 0) {
-            dump.append(flowIdle.getMean()).append(separator);                        //82
-            dump.append(flowIdle.getStandardDeviation()).append(separator);            //83
-            dump.append(flowIdle.getMax()).append(separator);                        //84
-            dump.append(flowIdle.getMin()).append(separator);                        //85
+            dump.append(flowIdle.getMean()).append(separator);                        //84
+            dump.append(flowIdle.getStandardDeviation()).append(separator);            //85
+            dump.append(flowIdle.getMax()).append(separator);                        //86
+            dump.append(flowIdle.getMin()).append(separator);                        //87
         } else {
             dump.append(0).append(separator);
             dump.append(0).append(separator);
@@ -1323,11 +1348,11 @@ public class BasicFlow {
             dump.append(0).append(separator);
         }
 
-        dump.append(icmpCode).append(separator);                                    // 86
-        dump.append(icmpType).append(separator);                                    // 87
+        dump.append(icmpCode).append(separator);                                    // 88
+        dump.append(icmpType).append(separator);                                    // 89
 
-        dump.append(cumulativeTcpConnectionDuration).append(separator);             //88
-        dump.append(getLabel());                                                    //89
+        dump.append(cumulativeTcpConnectionDuration).append(separator);             //90
+        dump.append(getLabel());                                                    //91
 
 
         return dump.toString();

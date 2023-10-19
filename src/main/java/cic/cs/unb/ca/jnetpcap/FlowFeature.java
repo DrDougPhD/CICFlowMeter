@@ -87,8 +87,10 @@ public enum FlowFeature {
     subfl_bw_byt("Subflow Bwd Bytes","SFBwB"),			//73
     fw_win_byt("FWD Init Win Bytes","FwWB"),			//74
     bw_win_byt("Bwd Init Win Bytes","BwWB"),			//75
-    Fw_act_pkt("Fwd Act Data Pkts","FwAP"),			//76
+    Fw_act_pkt("Fwd Act Data Pkts","FwAP"),
+    Bw_act_pkt("Bwd Act Data Pkts","BwAP"),//76
     fw_seg_min("Fwd Seg Size Min","FwSgMI"),			//77
+    bw_seg_min("Bwd Seg Size Min", "BwSgMI"),
     atv_avg("Active Mean","AcAG"),				//78
     atv_std("Active Std","AcSD"),				//79
     atv_max("Active Max","AcMA"),				//80
