@@ -1,9 +1,6 @@
 package cic.cs.unb.ca.jnetpcap;
 
-import java.util.Arrays;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.jnetpcap.packet.format.FormatUtils;
@@ -85,23 +82,24 @@ public class BasicFlow {
     private long bbulkSizeHelper = 0;
     private long blastBulkTS = 0;
 
+    private int fwdTcpRetransCnt = 0;
+    private int bwdTcpRetransCnt = 0;
+    private Set<TcpRetransmissionDTO> tcpPacketsSeen;
+
     // The flow timeout is dependent on the user configuration and is unable to capture proper
     // context in extended TCP connections. This field will help identify whether a flow is
     // part of an extended TCP connection.
-    private long cumulativeTcpConnectionDuration;
+    private long cumulativeConnectionDuration;
 
     //To keep track of TCP connection teardown, or an RST packet in one direction.
     private TcpFlowState tcpFlowState;
-
-    // Create a link to the previousTcpFlow if it exists
-    private BasicFlow previousTcpFlow;
 
     // ICMP fields
     private int icmpCode = -1;
     private int icmpType = -1;
 
-
-    public BasicFlow(boolean isBidirectional, BasicPacketInfo packet, byte[] flowSrc, byte[] flowDst, int flowSrcPort, int flowDstPort, long activityTimeout) {
+    public BasicFlow(boolean isBidirectional, BasicPacketInfo packet, byte[] flowSrc, byte[] flowDst, int flowSrcPort,
+                     int flowDstPort, long activityTimeout) {
         super();
         this.activityTimeout = activityTimeout;
         this.initParameters();
@@ -112,6 +110,22 @@ public class BasicFlow {
         this.dstPort = flowDstPort;
         this.firstPacket(packet);
     }
+
+    public BasicFlow(boolean isBidirectional, BasicPacketInfo packet, byte[] flowSrc, byte[] flowDst, int flowSrcPort,
+            int flowDstPort, long activityTimeout, Set<TcpRetransmissionDTO> tcpPacketsSeen) {
+        super();
+        this.activityTimeout = activityTimeout;
+        this.initParameters();
+        this.isBidirectional = isBidirectional;
+        this.src = flowSrc;
+        this.dst = flowDst;
+        this.srcPort = flowSrcPort;
+        this.dstPort = flowDstPort;
+        this.tcpPacketsSeen = tcpPacketsSeen;
+        this.firstPacket(packet);
+    }
+
+
     public BasicFlow(boolean isBidirectional, BasicPacketInfo packet, long activityTimeout) {
         super();
         this.activityTimeout = activityTimeout;
@@ -156,12 +170,13 @@ public class BasicFlow {
         this.bFIN_cnt = 0;
         this.fHeaderBytes = 0L;
         this.bHeaderBytes = 0L;
-        this.cumulativeTcpConnectionDuration = 0L;
+        this.cumulativeConnectionDuration = 0L;
         this.tcpFlowState = null;
+        this.tcpPacketsSeen = new HashSet<TcpRetransmissionDTO>();
     }
 
     public void firstPacket(BasicPacketInfo packet) {
-
+        
         if (this.src == null) {
             this.src = packet.getSrc();
             this.srcPort = packet.getSrcPort();
@@ -174,6 +189,8 @@ public class BasicFlow {
         updateFlowBulk(packet);
 
         checkFlags(packet);
+        handleTcpRetransmissionFields(packet);
+
         this.endActiveTime = packet.getTimeStamp();
         this.flowStartTime = packet.getTimeStamp();
         this.flowLastSeen = packet.getTimeStamp();
@@ -198,6 +215,12 @@ public class BasicFlow {
             if (packet.hasFlagURG()) {
                 this.fURG_cnt++;
             }
+            if (packet.hasFlagFIN()) {
+                this.fFIN_cnt++;
+            }
+            if (packet.hasFlagRST()) {
+                this.fRST_cnt++;
+            }
         } else {
             this.min_seg_size_backward = packet.getHeaderBytes();
             Init_Win_bytes_backward = packet.getTCPWindow();
@@ -215,6 +238,12 @@ public class BasicFlow {
             if (packet.hasFlagURG()) {
                 this.bURG_cnt++;
             }
+            if (packet.hasFlagFIN()) {
+                this.bFIN_cnt++;
+            }
+            if (packet.hasFlagRST()) {
+                this.bRST_cnt++;
+            }
         }
         this.protocol = packet.getProtocol();
         this.icmpCode = packet.getIcmpCode();
@@ -222,14 +251,39 @@ public class BasicFlow {
         this.flowId = packet.getFlowId();
     }
 
+    /***
+     * The retransmission mechanism is crude, and relies on the fact that the fields in the TcpRetransmissionDTO
+     * class are unique. This is not a perfect solution, but it should be good enough for detection of very obvious
+     * TCP retransmissions.
+     * @param packet
+     */
+    private void handleTcpRetransmissionFields(BasicPacketInfo packet) {
+        if (this.protocol == ProtocolEnum.TCP) {
+            TcpRetransmissionDTO tcpRetransmissionDTO = packet.tcpRetransmissionDTO();
+            // If the element was successfully added to the hashset, then it has not been seen
+            // before, and is not a retransmission.
+            boolean isRetransmission = !(this.tcpPacketsSeen.add(tcpRetransmissionDTO));
+            if (isRetransmission) {
+                // check if the packet is a forward packet
+                if (Arrays.equals(this.src, packet.getSrc())) {
+                    // increment the forward retransmission count
+                    this.fwdTcpRetransCnt++;
+                } else {
+                    // increment the backward retransmission count
+                    this.bwdTcpRetransCnt++;
+                }
+            }
+        }
+    }
+
     public void addPacket(BasicPacketInfo packet) {
         updateFlowBulk(packet);
         detectUpdateSubflows(packet);
         checkFlags(packet);
+        handleTcpRetransmissionFields(packet);
         long currentTimestamp = packet.getTimeStamp();
         if (isBidirectional) {
             this.flowLengthStats.addValue((double) packet.getPayloadBytes());
-
             if (Arrays.equals(this.src, packet.getSrc())) {
                 if (packet.getPayloadBytes() >= 1) {
                     this.Act_data_pkt_forward++;
@@ -1141,20 +1195,20 @@ public class BasicFlow {
         this.tcpFlowState = state;
     }
 
-    public long getCumulativeTcpConnectionDuration() {
-        return this.cumulativeTcpConnectionDuration;
+    public long getCumulativeConnectionDuration() {
+        return this.cumulativeConnectionDuration;
     }
 
-    public void setCumulativeTcpConnectionDuration(long cumTcpDuration) {
-        this.cumulativeTcpConnectionDuration = cumTcpDuration;
+    public void setCumulativeConnectionDuration(long cumCnxDuration) {
+        this.cumulativeConnectionDuration = cumCnxDuration;
     }
 
-    public BasicFlow getPreviousTcpFlow() {
-        return this.previousTcpFlow;
+    public Set<TcpRetransmissionDTO> getTcpPacketsSeen() {
+        return this.tcpPacketsSeen;
     }
 
-    public void setPreviousTcpFlow(BasicFlow previousTcpFlow) {
-        this.previousTcpFlow = previousTcpFlow;
+    public void setTcpPacketsSeen(Set<TcpRetransmissionDTO> tcpPacketsSeen) {
+        this.tcpPacketsSeen = tcpPacketsSeen;
     }
 
     public int getIcmpCode() {
@@ -1221,12 +1275,19 @@ public class BasicFlow {
             dump.append(0).append(separator);
             dump.append(0).append(separator);
         }
-        dump.append(((double) (forwardBytes + backwardBytes)) / ((double) flowDuration / 1000000L)).append(separator);//21
-        dump.append(((double) packetCount()) / ((double) flowDuration / 1000000L)).append(separator);//22
-        dump.append(flowIAT.getMean()).append(separator);                            //23
-        dump.append(flowIAT.getStandardDeviation()).append(separator);                //24
-        dump.append(flowIAT.getMax()).append(separator);                            //25
-        dump.append(flowIAT.getMin()).append(separator);                            //26
+
+        if(flowDuration != 0){
+            dump.append(((double) (forwardBytes + backwardBytes)) / ((double) flowDuration / 1000000L)).append(separator); //21
+            dump.append(((double) packetCount()) / ((double) flowDuration / 1000000L)).append(separator); // 22
+        }else{
+            dump.append(-1).append(separator);
+            dump.append(-1).append(separator);
+        }
+
+        dump.append(Double.isNaN(flowIAT.getMean()) ? 0 : flowIAT.getMean()).append(separator);  // 23
+        dump.append(Double.isNaN(flowIAT.getStandardDeviation()) ? 0 : flowIAT.getStandardDeviation()).append(separator); //24
+        dump.append(Double.isNaN(flowIAT.getMax()) ? 0 : flowIAT.getMax()).append(separator);    //25
+        dump.append(Double.isNaN(flowIAT.getMin()) ? 0 : flowIAT.getMin()).append(separator);                         //26
 
         if (this.forward.size() > 1) {
             dump.append(forwardIAT.getSum()).append(separator);                        //27
@@ -1351,9 +1412,12 @@ public class BasicFlow {
         dump.append(icmpCode).append(separator);                                    // 88
         dump.append(icmpType).append(separator);                                    // 89
 
-        dump.append(cumulativeTcpConnectionDuration).append(separator);             //90
-        dump.append(getLabel());                                                    //91
+        dump.append(fwdTcpRetransCnt).append(separator);                                    // 88
+        dump.append(bwdTcpRetransCnt).append(separator);                                    // 89
+        dump.append(fwdTcpRetransCnt+bwdTcpRetransCnt).append(separator);                   // 90
 
+        dump.append(cumulativeConnectionDuration).append(separator);                //91
+        dump.append(getLabel());                                                    //92
 
         return dump.toString();
     }
