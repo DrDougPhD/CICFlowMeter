@@ -189,7 +189,6 @@ public class BasicFlow {
         updateFlowBulk(packet);
 
         checkFlags(packet);
-        handleTcpRetransmissionFields(packet);
 
         this.endActiveTime = packet.getTimeStamp();
         this.flowStartTime = packet.getTimeStamp();
@@ -249,6 +248,7 @@ public class BasicFlow {
         this.icmpCode = packet.getIcmpCode();
         this.icmpType = packet.getIcmpType();
         this.flowId = packet.getFlowId();
+        handleTcpRetransmissionFields(packet);
     }
 
     /***
