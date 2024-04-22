@@ -710,7 +710,7 @@ public class BasicFlow {
         dump += getDstPort() + ",";
         dump += getProtocol().val + ",";
         //dump+=this.flowStartTime+",";
-        dump += DateFormatter.parseDateFromLong(this.flowStartTime / 1000L, "dd/MM/yyyy hh:mm:ss") + ",";
+        dump += DateFormatter.parseDateFromLong(this.flowStartTime / 1000L) + ",";
         long flowDuration = this.flowLastSeen - this.flowStartTime;
         dump += flowDuration + ",";
         dump += this.fwdPktStats.getN() + ",";
@@ -969,7 +969,7 @@ public class BasicFlow {
     }
 
     public String getTimeStamp() {
-        return DateFormatter.parseDateFromLong(flowStartTime / 1000L, "dd/MM/yyyy hh:mm:ss");
+        return DateFormatter.parseDateFromLong(flowStartTime / 1000L);
     }
 
     public long getFlowDuration() {
