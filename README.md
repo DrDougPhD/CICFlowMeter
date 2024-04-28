@@ -41,6 +41,7 @@ sudo update-alternatives --config java
 
 #### TODO
 
+* Code style and syntax fixes. SonarLint is rather opinionated.
 * Choose either a Maven build or a Gradle build. Best not to rely on both.
 * Upgrade JDK, Gradle, and library dependencies to latest versions.
 
