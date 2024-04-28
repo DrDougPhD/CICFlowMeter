@@ -44,6 +44,13 @@ sudo update-alternatives --config java
 * Code style and syntax fixes. SonarLint is rather opinionated.
 * Choose either a Maven build or a Gradle build. Best not to rely on both.
 * Upgrade JDK, Gradle, and library dependencies to latest versions.
+* Fix Gradle tasks in [`./build.gradle`](./build.gradle)
+    * `./gradlew fatJar` does nothing
+* Remove unnecessary Gradle tasks
+    * `zipPro` and `zipSrc` may be handled by built-in `distZip`
+    * `fatJar` might be handled by built-in `jar`
+    * `execute` might be handled by `run`
+    * Unsure which existing task can do `exeCMD`
 
 
 ### Data Download
