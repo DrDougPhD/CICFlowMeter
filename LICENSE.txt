@@ -1,3 +1,4 @@
+# Copyright (c) 2022--2024 Doug McGeehan
 # Copyright (c) 2021 Gints Engelen (gints.engelen@kuleuven.be)
 
 # When using this modified version of the CICFlowMeter tool, please cite our paper (preliminary citation):
