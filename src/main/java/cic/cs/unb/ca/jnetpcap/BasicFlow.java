@@ -1,20 +1,31 @@
 package cic.cs.unb.ca.jnetpcap;
 
 import java.util.Arrays;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
 import org.jnetpcap.packet.format.FormatUtils;
+import dev.sequana.cyber.CostMeasuredSummaryStatistics;
+import dev.sequana.cyber.CostMeasurements;
 
 public class BasicFlow {
+    Map<FlowFeature, CostMeasurements> featureCosts = null;
 
     private final static String separator = ",";
-    private SummaryStatistics fwdPktStats = null;
-    private SummaryStatistics bwdPktStats = null;
+    private CostMeasuredSummaryStatistics fwdPktStats = null;
+    private CostMeasuredSummaryStatistics bwdPktStats = null;
     private List<BasicPacketInfo> forward = null;
     private List<BasicPacketInfo> backward = null;
 
@@ -55,12 +66,12 @@ public class BasicFlow {
     private long endActiveTime;
     private String flowId = null;
 
-    private SummaryStatistics flowIAT = null;
-    private SummaryStatistics forwardIAT = null;
-    private SummaryStatistics backwardIAT = null;
-    private SummaryStatistics flowLengthStats = null;
-    private SummaryStatistics flowActive = null;
-    private SummaryStatistics flowIdle = null;
+    private CostMeasuredSummaryStatistics flowIAT = null;
+    private CostMeasuredSummaryStatistics forwardIAT = null;
+    private CostMeasuredSummaryStatistics backwardIAT = null;
+    private CostMeasuredSummaryStatistics flowLengthStats = null;
+    private CostMeasuredSummaryStatistics flowActive = null;
+    private CostMeasuredSummaryStatistics flowIdle = null;
 
     private long flowLastSeen;
     private long forwardLastSeen;
@@ -149,16 +160,21 @@ public class BasicFlow {
 
 
     public void initParameters() {
+        this.featureCosts = new HashMap<>();
+
         this.forward = new ArrayList<BasicPacketInfo>();
         this.backward = new ArrayList<BasicPacketInfo>();
-        this.flowIAT = new SummaryStatistics();
-        this.forwardIAT = new SummaryStatistics();
-        this.backwardIAT = new SummaryStatistics();
-        this.flowActive = new SummaryStatistics();
-        this.flowIdle = new SummaryStatistics();
-        this.flowLengthStats = new SummaryStatistics();
-        this.fwdPktStats = new SummaryStatistics();
-        this.bwdPktStats = new SummaryStatistics();
+        this.flowIAT = new CostMeasuredSummaryStatistics();
+        this.forwardIAT = new CostMeasuredSummaryStatistics();
+        this.backwardIAT = new CostMeasuredSummaryStatistics();
+        this.flowActive = new CostMeasuredSummaryStatistics();
+        this.flowIdle = new CostMeasuredSummaryStatistics();
+        this.flowLengthStats = new CostMeasuredSummaryStatistics();
+        this.fwdPktStats = new CostMeasuredSummaryStatistics(
+            this.featureCosts,
+            FlowFeature.tot_fw_pkt
+        );
+        this.bwdPktStats = new CostMeasuredSummaryStatistics();
         this.flagCounts = new HashMap<String, MutableInt>();
         initFlags();
         this.forwardBytes = 0L;
@@ -206,7 +222,8 @@ public class BasicFlow {
         if (Arrays.equals(this.src, packet.getSrc())) {
             this.min_seg_size_forward = packet.getHeaderBytes();
             Init_Win_bytes_forward = packet.getTCPWindow();
-            this.fwdPktStats.addValue((double) packet.getPayloadBytes());
+            this.fwdPktStats.startMeasuring()
+                .addValue((double) packet.getPayloadBytes());
             this.fHeaderBytes = packet.getHeaderBytes();
             this.forwardLastSeen = packet.getTimeStamp();
             this.forwardBytes += packet.getPayloadBytes();
@@ -293,7 +310,8 @@ public class BasicFlow {
                 if (packet.getPayloadBytes() >= 1) {
                     this.Act_data_pkt_forward++;
                 }
-                this.fwdPktStats.addValue((double) packet.getPayloadBytes());
+                this.fwdPktStats.startMeasuring()
+                    .addValue((double) packet.getPayloadBytes());
                 this.fHeaderBytes += packet.getHeaderBytes();
                 this.forward.add(packet);
                 this.forwardBytes += packet.getPayloadBytes();
@@ -348,7 +366,8 @@ public class BasicFlow {
             if (packet.getPayloadBytes() >= 1) {
                 this.Act_data_pkt_forward++;
             }
-            this.fwdPktStats.addValue((double) packet.getPayloadBytes());
+            this.fwdPktStats.startMeasuring()
+                .addValue((double) packet.getPayloadBytes());
             this.flowLengthStats.addValue((double) packet.getPayloadBytes());
             this.fHeaderBytes += packet.getHeaderBytes();
             this.forward.add(packet);
@@ -899,7 +918,7 @@ public class BasicFlow {
         return ((double) packetCount()) / ((double) getFlowDuration() / 1000000L);
     }
 
-    public SummaryStatistics getFlowIAT() {
+    public CostMeasuredSummaryStatistics getFlowIAT() {
         return flowIAT;
     }
 
@@ -1100,6 +1119,7 @@ public class BasicFlow {
     }
 
     public String dumpFlowBasedFeaturesEx() {
+        // Currently used.
         StringBuilder dump = new StringBuilder();
 
         dump.append(flowId).append(separator);                                        //1
@@ -1114,7 +1134,6 @@ public class BasicFlow {
 
         long flowDuration = flowLastSeen - flowStartTime;
         dump.append(flowDuration).append(separator);                                //8
-
         dump.append(fwdPktStats.getN()).append(separator);                            //9
         dump.append(bwdPktStats.getN()).append(separator);                            //10
         dump.append(fwdPktStats.getSum()).append(separator);                        //11
@@ -1287,7 +1306,35 @@ public class BasicFlow {
         dump.append(cumulativeConnectionDuration).append(separator);                //91
         dump.append(getLabel());                                                    //92
 
+        finishMeasurements();
+
         return dump.toString();
+    }
+
+    private void finishMeasurements() {
+        CSVFormat measurementCSV = CSVFormat.DEFAULT.builder()
+            .setHeader(FlowFeature.class)
+            .build();
+        
+        List<FlowFeature> features = Arrays.asList(
+            measurementCSV.getHeader()
+        ).stream()
+        .map(FlowFeature::getByName)
+        .filter(featureCosts::containsKey)
+        .collect(Collectors.toList());
+        
+        try (
+                BufferedWriter writer = Files.newBufferedWriter(Paths.get("measurements.txt"));
+                CSVPrinter csvPrinter = new CSVPrinter(writer, measurementCSV);
+        ) {
+            csvPrinter.printRecord(
+                features.stream()
+                .map(field -> this.featureCosts.get(field).toString())
+                .collect(Collectors.toList())
+            );
+        } catch (IOException ex) {
+            
+        }
     }
 }
 
