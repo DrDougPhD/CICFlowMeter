@@ -9,18 +9,16 @@ import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 public class DateFormatter {
+	public static final String FORMAT = "dd/MM/yyyy HH:mm:ss.SSS";
 	
-	public static String parseDateFromLong(long time, String format){
+	public static String parseDateFromLong(long time){
 		try{
-			if (format == null){
-				format = "dd/MM/yyyy hh:mm:ss";					
-			}
-			SimpleDateFormat simpleFormatter = new SimpleDateFormat(format);
+			SimpleDateFormat simpleFormatter = new SimpleDateFormat(FORMAT);
 			Date tempDate = new Date(time);
 			return simpleFormatter.format(tempDate);
 		}catch(Exception ex){
 			System.out.println(ex.toString());
-			return "dd/MM/yyyy hh:mm:ss";
+			return FORMAT;
 		}		
 	}
 
@@ -39,13 +37,8 @@ public class DateFormatter {
 				.replace( "Z" , "" );
 	}
 
-	public static String convertMilliseconds2String(long time, String format) {
-
-        if (format == null){
-            format = "dd/MM/yyyy hh:mm:ss";
-        }
-
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern(format);
+	public static String convertMilliseconds2String(long time) {
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern(FORMAT);
         LocalDateTime ldt = LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault());
         return ldt.format(formatter);
 	}

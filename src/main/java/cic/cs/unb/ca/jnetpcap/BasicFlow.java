@@ -1,6 +1,11 @@
 package cic.cs.unb.ca.jnetpcap;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.jnetpcap.packet.format.FormatUtils;
@@ -708,7 +713,7 @@ public class BasicFlow {
         dump += getDstPort() + ",";
         dump += getProtocol().val + ",";
         //dump+=this.flowStartTime+",";
-        dump += DateFormatter.parseDateFromLong(this.flowStartTime / 1000L, "dd/MM/yyyy hh:mm:ss") + ",";
+        dump += DateFormatter.parseDateFromLong(this.flowStartTime / 1000L) + ",";
         long flowDuration = this.flowLastSeen - this.flowStartTime;
         dump += flowDuration + ",";
         dump += this.fwdPktStats.getN() + ",";
@@ -967,7 +972,7 @@ public class BasicFlow {
     }
 
     public String getTimeStamp() {
-        return DateFormatter.parseDateFromLong(flowStartTime / 1000L, "dd/MM/yyyy hh:mm:ss");
+        return DateFormatter.parseDateFromLong(flowStartTime / 1000L);
     }
 
     public long getFlowDuration() {

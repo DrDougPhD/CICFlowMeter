@@ -3,7 +3,7 @@ apply plugin: 'maven'
 apply plugin: 'application'
 
 group = 'cic.unb.ca'
-version = '4.0'
+version = '4.1.0'
 description = """CICFlowMeterV4"""
 
 sourceCompatibility = 1.8
@@ -74,6 +74,7 @@ task zipPro(type: Zip){
 
 
 task fatJar(type: Jar) {
+    println 'TODO: fix me, because I do nothing at the moment.'
     println 'type Jar'
 
     manifest {
@@ -95,8 +96,7 @@ task fatJar(type: Jar) {
 task execute(type: JavaExec) {
     println 'type JavaExec'
 
-
-    main = "cic.cs.unb.ca.ifm.App" //main class
+    main = "cic.cs.unb.ca.ifm.App"
     classpath = sourceSets.main.runtimeClasspath
     String osName = System.getProperty('os.name').toLowerCase()
     if(osName.contains('windows')){
@@ -108,7 +108,7 @@ task execute(type: JavaExec) {
 
 
 task exeCMD(type: JavaExec){
-    main = "cic.cs.unb.ca.ifm.Cmd" //main class
+    main = "cic.cs.unb.ca.ifm.Cmd"
     classpath = sourceSets.main.runtimeClasspath
     String osName = System.getProperty('os.name').toLowerCase()
     if(osName.contains('windows')){
@@ -116,8 +116,10 @@ task exeCMD(type: JavaExec){
     }else{
         jvmArgs '-Djava.library.path=jnetpcap/linux/jnetpcap-1.4.r1500'
     }
-    args = ["/media/farodin/AEAA59A1AA59673D/CICIDS2018/cse-cic-ids2018/Original Network Traffic and Log data/Friday-16-02-2018/pcap/",
-            "/media/farodin/AEAA59A1AA59673D/CICIDS2018/cse-cic-ids2018/Original Network Traffic and Log data/Friday-16-02-2018/csv/"]
+    args = [
+        "./data/sample-pcaps/",
+        "./data/resulting-csvs/"
+    ]
 }
 
 
@@ -151,7 +153,6 @@ applicationDistribution.from("jnetpcap/win/jnetpcap-1.4.r1500") {
 applicationDistribution.from('LICENSE.txt'){
     into('')
 }
-applicationDistribution.from('ReadMe.txt'){
+applicationDistribution.from('README.md'){
     into('')
-    rename("ReadMe.txt","README.md")
 }

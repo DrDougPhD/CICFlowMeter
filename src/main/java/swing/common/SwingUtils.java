@@ -4,11 +4,16 @@ import org.apache.tika.Tika;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.swing.*;
+import javax.swing.JTable;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableColumn;
-import java.awt.*;
-import java.io.*;
+import java.awt.Container;
+import java.awt.Component;
+import java.awt.BorderLayout;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.LineNumberReader;
 import java.util.Enumeration;
 
 /**
