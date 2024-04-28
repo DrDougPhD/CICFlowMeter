@@ -116,9 +116,10 @@ task exeCMD(type: JavaExec){
     }else{
         jvmArgs '-Djava.library.path=jnetpcap/linux/jnetpcap-1.4.r1500'
     }
-    // TODO: allow custom arguments from gradle wrapper?
-    // args = ["/media/farodin/AEAA59A1AA59673D/CICIDS2018/cse-cic-ids2018/Original Network Traffic and Log data/Friday-16-02-2018/pcap/",
-    //         "/media/farodin/AEAA59A1AA59673D/CICIDS2018/cse-cic-ids2018/Original Network Traffic and Log data/Friday-16-02-2018/csv/"]
+    args = [
+        "./data/sample-pcaps/",
+        "./data/resulting-csvs/"
+    ]
 }
 
 
