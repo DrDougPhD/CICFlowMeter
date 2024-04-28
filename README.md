@@ -20,16 +20,30 @@ It required the installation of the following:
 
 * [Extension Pack for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-pack) by Microsoft
 * [Gradle for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-gradle) by Microsoft
-* Java JDK >= 8
+* Java JDK >= 8, <17
 
 
 Executing the following commands in your integrated terminal accomplishes this with ease.
 
 ```bash
-sudo apt update && sudo apt install -y openjdk-21-jdk
+sudo apt update && sudo apt install -y openjdk-11-jdk
 code --install-extension vscjava.vscode-java-pack
 code --install-extension vscjava.vscode-gradle
 ```
+
+If you have multiple versions of the Java JDK installed on your system, do not forget to reconfigure your system's default one:
+
+```bash
+sudo update-alternatives --config javac
+sudo update-alternatives --config java
+```
+
+
+#### TODO
+
+* Choose either a Maven build or a Gradle build. Best not to rely on both.
+* Upgrade JDK, Gradle, and library dependencies to latest versions.
+
 
 ### Data Download
 
