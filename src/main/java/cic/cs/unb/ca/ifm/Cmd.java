@@ -118,7 +118,11 @@ public class Cmd {
         }
 
         FlowGenerator flowGen = new FlowGenerator(true, flowTimeout, activityTimeout);
-        flowGen.addFlowListener(new FlowListener(fileName,outPath));
+        flowGen.addFlowListener(new FlowListener(
+            fileName,
+            outPath,
+            flowCostRecorder
+        ));
         boolean readIP6 = false;
         boolean readIP4 = true;
         PacketReader packetReader = new PacketReader(inputFile, readIP4, readIP6);
@@ -199,13 +203,17 @@ public class Cmd {
 
         private long cnt;
 
-        public FlowListener(String fileName, String outPath) {
+        private FlowCostRecorder costRecorder;
+
+        public FlowListener(String fileName, String outPath, FlowCostRecorder costRecorder) {
             this.fileName = fileName;
             this.outPath = outPath;
+            this.costRecorder = costRecorder;
         }
 
         @Override
         public void onFlowGenerated(BasicFlow flow) {
+            costRecorder.finalizeFlowCosts(flow);
 
             String flowDump = flow.dumpFlowBasedFeaturesEx();
             List<String> flowStringList = new ArrayList<>();

@@ -1,27 +1,19 @@
 package cic.cs.unb.ca.jnetpcap;
 
 import java.util.Arrays;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.StringWriter;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVPrinter;
 import org.jnetpcap.packet.format.FormatUtils;
 import dev.sequana.cyber.CostMeasuredSummaryStatistics;
 import dev.sequana.cyber.CostMeasurements;
 
 public class BasicFlow {
-    Map<FlowFeature, CostMeasurements> featureCosts = null;
+    public Map<FlowFeature, CostMeasurements> featureCosts = null;
 
     private final static String separator = ",";
     private CostMeasuredSummaryStatistics fwdPktStats = null;
@@ -1297,35 +1289,7 @@ public class BasicFlow {
         dump.append(cumulativeConnectionDuration).append(separator);                //91
         dump.append(getLabel());                                                    //92
 
-        finishMeasurements();
-
         return dump.toString();
-    }
-
-    private void finishMeasurements() {
-        CSVFormat measurementCSV = CSVFormat.DEFAULT.builder()
-            .setHeader(FlowFeature.class)
-            .build();
-        
-        List<FlowFeature> features = Arrays.asList(
-            measurementCSV.getHeader()
-        ).stream()
-        .map(FlowFeature::getByName)
-        .filter(featureCosts::containsKey)
-        .collect(Collectors.toList());
-        
-        try (
-                BufferedWriter writer = Files.newBufferedWriter(Paths.get("measurements.txt"));
-                CSVPrinter csvPrinter = new CSVPrinter(writer, measurementCSV);
-        ) {
-            csvPrinter.printRecord(
-                features.stream()
-                .map(field -> this.featureCosts.get(field).toString())
-                .collect(Collectors.toList())
-            );
-        } catch (IOException ex) {
-            
-        }
     }
 }
 

@@ -61,7 +61,7 @@ public class FlowCostRecorder {
         );
     }
 
-    public void captureFinalCostsFromFlow(BasicFlow flow) {
+    public void finalizeFlowCosts(BasicFlow flow) {
         this.records.add(new FlowCost(flow));
     }
 
@@ -101,5 +101,5 @@ public class FlowCostRecorder {
             System.err.println(ex.toString());
             logger.error(ex.toString());
         }
-    }    
+    }
 }
