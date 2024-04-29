@@ -150,15 +150,6 @@ public class BasicFlow {
         this.firstPacket(packet);
     }
 
-    public BasicFlow(BasicPacketInfo packet, long activityTimeout) {
-        super();
-        this.activityTimeout = activityTimeout;
-        this.initParameters();
-        this.isBidirectional = true;
-        firstPacket(packet);
-    }
-
-
     public void initParameters() {
         this.featureCosts = new HashMap<>();
 
