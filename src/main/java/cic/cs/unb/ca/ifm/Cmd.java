@@ -34,18 +34,6 @@ public class Cmd {
         String pcapPath;
         String outPath;
 
-        /* Select path for reading all .pcap files */
-        /*if(args.length<1 || args[0]==null) {
-            pcapPath = rootPath+"/data/in/";
-        }else {
-        }*/
-
-        /* Select path for writing all .csv files */
-        /*if(args.length<2 || args[1]==null) {
-            outPath = rootPath+"/data/out/";
-        }else {
-        }*/
-
         if (args.length < 1) {
             logger.info("Please select pcap!");
             return;
