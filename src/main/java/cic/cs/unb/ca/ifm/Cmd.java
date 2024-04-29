@@ -12,6 +12,7 @@ import org.jnetpcap.PcapClosedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import cic.cs.unb.ca.jnetpcap.worker.InsertCsvRow;
+import dev.sequana.cyber.FlowCostRecorder;
 import swing.common.SwingUtils;
 
 import java.io.File;
@@ -25,6 +26,8 @@ public class Cmd {
     public static final Logger logger = LoggerFactory.getLogger(Cmd.class);
     private static final String DividingLine = "-------------------------------------------------------------------------------";
     private static String[] animationChars = new String[]{"|", "/", "-", "\\"};
+
+    private static FlowCostRecorder flowCostRecorder;
 
     public static void main(String[] args) {
 
@@ -59,6 +62,7 @@ public class Cmd {
         logger.info("You select: {}",pcapPath);
         logger.info("Out folder: {}",outPath);
 
+        flowCostRecorder = new FlowCostRecorder(outPath);
 
         if (in.isDirectory()) {
             readPcapDir(in,outPath,flowTimeout,activityTimeout);
@@ -72,6 +76,7 @@ public class Cmd {
             }
         }
 
+        flowCostRecorder.close();
     }
 
     private static void readPcapDir(File inputPath, String outPath, long flowTimeout, long activityTimeout) {
