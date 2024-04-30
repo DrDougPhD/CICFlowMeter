@@ -1,33 +1,29 @@
 package dev.sequana.cyber;
 
-import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
-import java.util.function.DoubleSupplier;
 import java.util.stream.Stream;
-
-import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 
 import cic.cs.unb.ca.jnetpcap.BasicFlow;
 import cic.cs.unb.ca.jnetpcap.BasicPacketInfo;
 import cic.cs.unb.ca.jnetpcap.FlowFeature;
 
-public class CostMeasuredSummaryStatistics extends SummaryStatistics implements CostMeasuredDataStructure {
+public class CostMeasuredList extends LinkedList<BasicPacketInfo> implements CostMeasuredDataStructure {
     private Map<FlowFeature, CostMeasurements> featureCostMeasurements;
-
-    // TODO: Something about current context
-    private long startTime = 0L;
-    private long duration = 0L;
     private long operationTimestamp;
     private boolean noActiveMeasurements = true;
-
+    private long startTime = 0L;
+    private long duration = 0L;
     public long previousStartTime;
 
-    public CostMeasuredSummaryStatistics(
+    public CostMeasuredList(
             BasicFlow flow,
             Map<FlowFeature, CostMeasurements> featureCosts,
             FlowFeature... associatedFeatures
     ) {
+        super();
+
         this.featureCostMeasurements = new HashMap<>(associatedFeatures.length);
 
         for (FlowFeature feature : associatedFeatures) {
@@ -41,8 +37,6 @@ public class CostMeasuredSummaryStatistics extends SummaryStatistics implements 
         }
     }
 
-    public CostMeasuredSummaryStatistics() {}
-
     public void startMeasuring(BasicPacketInfo packet) {
         this.operationTimestamp = packet.getTimeStamp();
         this.startMeasuring();
@@ -53,7 +47,15 @@ public class CostMeasuredSummaryStatistics extends SummaryStatistics implements 
         startTime = System.nanoTime();
     }
 
-    public void stopMeasuring(String operationName, FlowFeature... onlyAppliesToFeatures) {
+    @Override
+    public boolean add(BasicPacketInfo packet) {
+        startMeasuring(packet);
+        boolean result = super.add(packet);
+        stopMeasuring("listAppend");
+        return result;
+    }
+
+    public void stopMeasuring(String operationName) {
         duration = System.nanoTime() - startTime;
         this.previousStartTime = startTime;
 
@@ -63,14 +65,7 @@ public class CostMeasuredSummaryStatistics extends SummaryStatistics implements 
 
         this.noActiveMeasurements = true;
 
-        Stream<FlowFeature> featuresToUpdate;
-        if (onlyAppliesToFeatures.length == 0) {
-            // Measurement applies to all features
-            featuresToUpdate = this.featureCostMeasurements.keySet().stream();
-        } else {
-            featuresToUpdate = Arrays.asList(onlyAppliesToFeatures).stream();
-        }
-
+        Stream<FlowFeature> featuresToUpdate = this.featureCostMeasurements.keySet().stream();
         featuresToUpdate.forEach(
             (feature) -> featureCostMeasurements.get(feature)
                 .addMeasurement(
@@ -85,30 +80,13 @@ public class CostMeasuredSummaryStatistics extends SummaryStatistics implements 
         this.operationTimestamp = -1;
     }
 
-    public void addValue(BasicPacketInfo packet, String operationName, DoubleSupplier sourceOperation) {
-        startMeasuring(packet);
-        super.addValue(sourceOperation.getAsDouble());
-        stopMeasuring(operationName);
-    }
-
-    public long getN(FlowFeature... onlyAppliesToFeatures) {
-        startMeasuring();
-        long n = super.getN();
-        stopMeasuring("getN", onlyAppliesToFeatures);
-        return n;
-    }
+	public void stopAndOverrideStartTime(CostMeasuredDataStructure structure, String operation) {
+		this.startTime = structure.getStartTime();
+		stopMeasuring(operation);
+	}
 
     @Override
     public Long getStartTime() {
         return this.startTime;
     }
-
-    // /**
-    //  * Finish taking measurements for the features associated with this measurement
-    //  * and record them to a file for later analysis.
-    //  * @param flowId
-    //  */
-    // public void finalMeasurements(String flowId) {
-    //     CSVFormat
-    // }
 }

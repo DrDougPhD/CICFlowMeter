@@ -1,14 +1,16 @@
 package cic.cs.unb.ca.jnetpcap;
 
 import java.util.Arrays;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.jnetpcap.packet.format.FormatUtils;
+
+import dev.sequana.cyber.CostMeasuredList;
 import dev.sequana.cyber.CostMeasuredSummaryStatistics;
 import dev.sequana.cyber.CostMeasurements;
 
@@ -18,7 +20,8 @@ public class BasicFlow {
     private final static String separator = ",";
     private CostMeasuredSummaryStatistics fwdPktStats = null;
     private CostMeasuredSummaryStatistics bwdPktStats = null;
-    private List<BasicPacketInfo> forward = null;
+
+    private CostMeasuredList forward = null;
     private List<BasicPacketInfo> backward = null;
 
     private long forwardBytes;
@@ -145,7 +148,11 @@ public class BasicFlow {
     public void initParameters() {
         this.featureCosts = new HashMap<>();
 
-        this.forward = new LinkedList<>();
+        this.forward = new CostMeasuredList(
+            this,
+            this.featureCosts,
+            FlowFeature.fw_seg_avg
+        );
         this.backward = new LinkedList<>();
         this.flowIAT = new CostMeasuredSummaryStatistics();
         this.forwardIAT = new CostMeasuredSummaryStatistics();
@@ -156,7 +163,8 @@ public class BasicFlow {
         this.fwdPktStats = new CostMeasuredSummaryStatistics(
             this,
             this.featureCosts,
-            FlowFeature.tot_fw_pkt
+            FlowFeature.tot_fw_pkt,
+            FlowFeature.fw_seg_avg
         );
         this.bwdPktStats = new CostMeasuredSummaryStatistics();
         this.flagCounts = new HashMap<String, MutableInt>();
@@ -406,9 +414,16 @@ public class BasicFlow {
     }
 
     public double fAvgSegmentSize() {
+        // Start measurement for fw_seg_avg
+        this.fwdPktStats.startMeasuring();
+
+        double value = 0;
         if (this.forward.size() != 0)
             return (this.fwdPktStats.getSum() / (double) this.forward.size());
-        return 0;
+        // End measurement for fw_seg_avg
+
+        this.fwdPktStats.stopMeasuring("final", FlowFeature.fw_seg_avg);
+        return value;
     }
 
     public double bAvgSegmentSize() {
@@ -724,30 +739,6 @@ public class BasicFlow {
         }
     }
 
-    public List<BasicPacketInfo> getForward() {
-        return new ArrayList<>(forward);
-    }
-
-    public void setForward(List<BasicPacketInfo> forward) {
-        this.forward = forward;
-    }
-
-    public List<BasicPacketInfo> getBackward() {
-        return new ArrayList<>(backward);
-    }
-
-    public void setBackward(List<BasicPacketInfo> backward) {
-        this.backward = backward;
-    }
-
-    public boolean isBidirectional() {
-        return isBidirectional;
-    }
-
-    public void setBidirectional(boolean isBidirectional) {
-        this.isBidirectional = isBidirectional;
-    }
-
     public byte[] getSrc() {
         return Arrays.copyOf(src, src.length);
     }
@@ -788,16 +779,6 @@ public class BasicFlow {
         this.protocol = protocol;
     }
 
-    public String getProtocolStr() {
-        switch (this.protocol.val) {
-            case (6):
-                return "TCP";
-            case (17):
-                return "UDP";
-        }
-        return "UNKNOWN";
-    }
-
     public long getFlowStartTime() {
         return flowStartTime;
     }
@@ -822,153 +803,20 @@ public class BasicFlow {
         this.flowLastSeen = lastSeen;
     }
 
-    public long getStartActiveTime() {
-        return startActiveTime;
-    }
-
     public void setStartActiveTime(long startActiveTime) {
         this.startActiveTime = startActiveTime;
-    }
-
-    public long getEndActiveTime() {
-        return endActiveTime;
     }
 
     public void setEndActiveTime(long endActiveTime) {
         this.endActiveTime = endActiveTime;
     }
 
-    public String getSrcIP() {
-        return FormatUtils.ip(src);
-    }
-
-    public String getDstIP() {
-        return FormatUtils.ip(dst);
-    }
-
-    public String getTimeStamp() {
-        return DateFormatter.parseDateFromLong(flowStartTime / 1000L);
-    }
-
     public long getFlowDuration() {
         return flowLastSeen - flowStartTime;
     }
 
-    public long __________________getTotalFwdPackets() {
-        return fwdPktStats.getN();
-    }
-
-    public long getTotalBackwardPackets() {
-        return bwdPktStats.getN();
-    }
-
-    public double ________________getTotalLengthofFwdPackets() {
-        return fwdPktStats.getSum();
-    }
-
-    public double getTotalLengthofBwdPackets() {
-        return bwdPktStats.getSum();
-    }
-
-    public double ______________getFwdPacketLengthMax() {
-        return (fwdPktStats.getN() > 0L) ? fwdPktStats.getMax() : 0;
-    }
-
-    public double ______________getFwdPacketLengthMin() {
-        return (fwdPktStats.getN() > 0L) ? fwdPktStats.getMin() : 0;
-    }
-
-    public double ______________getFwdPacketLengthMean() {
-        return (fwdPktStats.getN() > 0L) ? fwdPktStats.getMean() : 0;
-    }
-
-    public double ______________getFwdPacketLengthStd() {
-        return (fwdPktStats.getN() > 0L) ? fwdPktStats.getStandardDeviation() : 0;
-    }
-
-    public double getBwdPacketLengthMax() {
-        return (bwdPktStats.getN() > 0L) ? bwdPktStats.getMax() : 0;
-    }
-
-    public double getBwdPacketLengthMin() {
-        return (bwdPktStats.getN() > 0L) ? bwdPktStats.getMin() : 0;
-    }
-
-    public double getBwdPacketLengthMean() {
-        return (bwdPktStats.getN() > 0L) ? bwdPktStats.getMean() : 0;
-    }
-
-    public double getBwdPacketLengthStd() {
-        return (bwdPktStats.getN() > 0L) ? bwdPktStats.getStandardDeviation() : 0;
-    }
-
-    public double getFlowBytesPerSec() {
-        //flow duration is in microseconds, therefore packets per seconds = packets / (duration/1000000)
-        return ((double) (forwardBytes + backwardBytes)) / ((double) getFlowDuration() / 1000000L);
-    }
-
-    public double getFlowPacketsPerSec() {
-        return ((double) packetCount()) / ((double) getFlowDuration() / 1000000L);
-    }
-
     public CostMeasuredSummaryStatistics getFlowIAT() {
         return flowIAT;
-    }
-
-    public double getFwdIATTotal() {
-        return (forward.size() > 1) ? forwardIAT.getSum() : 0;
-    }
-
-    public double getFwdIATMean() {
-        return (forward.size() > 1) ? forwardIAT.getMean() : 0;
-    }
-
-    public double getFwdIATStd() {
-        return (forward.size() > 1) ? forwardIAT.getStandardDeviation() : 0;
-    }
-
-    public double getFwdIATMax() {
-        return (forward.size() > 1) ? forwardIAT.getMax() : 0;
-    }
-
-    public double getFwdIATMin() {
-        return (forward.size() > 1) ? forwardIAT.getMin() : 0;
-    }
-
-    public double getBwdIATTotal() {
-        return (backward.size() > 1) ? backwardIAT.getSum() : 0;
-    }
-
-    public double getBwdIATMean() {
-        return (backward.size() > 1) ? backwardIAT.getMean() : 0;
-    }
-
-    public double getBwdIATStd() {
-        return (backward.size() > 1) ? backwardIAT.getStandardDeviation() : 0;
-    }
-
-    public double getBwdIATMax() {
-        return (backward.size() > 1) ? backwardIAT.getMax() : 0;
-    }
-
-    public double getBwdIATMin() {
-        return (backward.size() > 1) ? backwardIAT.getMin() : 0;
-    }
-
-    public int getFwdPSHFlags() {
-        return fPSH_cnt;
-    }
-
-    public int getBwdPSHFlags() {
-        return bPSH_cnt;
-    }
-
-    public int getFwdURGFlags() {
-        return fURG_cnt;
-    }
-
-    public int getBwdURGFlags() {
-        return bURG_cnt;
     }
 
     public int getFwdFINFlags() {
@@ -977,94 +825,6 @@ public class BasicFlow {
 
     public int getBwdFINFlags() {
         return bFIN_cnt;
-    }
-
-    public long getFwdHeaderLength() {
-        return fHeaderBytes;
-    }
-
-    public long getBwdHeaderLength() {
-        return bHeaderBytes;
-    }
-
-    public double getMinPacketLength() {
-        return (forward.size() > 0 || backward.size() > 0) ? flowLengthStats.getMin() : 0;
-    }
-
-    public double getMaxPacketLength() {
-        return (forward.size() > 0 || backward.size() > 0) ? flowLengthStats.getMax() : 0;
-    }
-
-    public double getPacketLengthMean() {
-        return (forward.size() > 0 || backward.size() > 0) ? flowLengthStats.getMean() : 0;
-    }
-
-    public double getPacketLengthStd() {
-        return (forward.size() > 0 || backward.size() > 0) ? flowLengthStats.getStandardDeviation() : 0;
-    }
-
-    public double getPacketLengthVariance() {
-        return (forward.size() > 0 || backward.size() > 0) ? flowLengthStats.getVariance() : 0;
-    }
-
-    public int getFlagCount(String key) {
-        return flagCounts.get(key).value;
-    }
-
-    public int getInit_Win_bytes_forward() {
-        return Init_Win_bytes_forward;
-    }
-
-    public int getInit_Win_bytes_backward() {
-        return Init_Win_bytes_backward;
-    }
-
-    public long getAct_data_pkt_forward() {
-        return Act_data_pkt_forward;
-    }
-
-    public long getAct_data_pkt_backward() {
-        return Act_data_pkt_backward;
-    }
-
-    public long getmin_seg_size_forward() {
-        return min_seg_size_forward;
-    }
-
-    public long getmin_seg_size_backward() {
-        return min_seg_size_backward;
-    }
-
-    public double getActiveMean() {
-        return (flowActive.getN() > 0) ? flowActive.getMean() : 0;
-    }
-
-    public double getActiveStd() {
-        return (flowActive.getN() > 0) ? flowActive.getStandardDeviation() : 0;
-    }
-
-    public double getActiveMax() {
-        return (flowActive.getN() > 0) ? flowActive.getMax() : 0;
-    }
-
-    public double getActiveMin() {
-        return (flowActive.getN() > 0) ? flowActive.getMin() : 0;
-    }
-
-    public double getIdleMean() {
-        return (flowIdle.getN() > 0) ? flowIdle.getMean() : 0;
-    }
-
-    public double getIdleStd() {
-        return (flowIdle.getN() > 0) ? flowIdle.getStandardDeviation() : 0;
-    }
-
-    public double getIdleMax() {
-        return (flowIdle.getN() > 0) ? flowIdle.getMax() : 0;
-    }
-
-    public double getIdleMin() {
-        return (flowIdle.getN() > 0) ? flowIdle.getMin() : 0;
     }
 
     public TcpFlowState getTcpFlowState() {
@@ -1241,7 +1001,9 @@ public class BasicFlow {
 
         dump.append(getDownUpRatio()).append(separator);                            //60
         dump.append(getAvgPacketSize()).append(separator);                            //61
+
         dump.append(fAvgSegmentSize()).append(separator);                            //62
+
         dump.append(bAvgSegmentSize()).append(separator);                            //63
         //dump.append(fHeaderBytes).append(separator);								//62 dupicate with 43
 
@@ -1309,10 +1071,4 @@ class MutableInt {
     public void increment() {
         ++value;
     }
-
-    public int get() {
-        return value;
-    }
-
-
 }
