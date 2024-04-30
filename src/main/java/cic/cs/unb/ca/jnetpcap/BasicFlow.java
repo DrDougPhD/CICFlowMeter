@@ -5,16 +5,19 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.jnetpcap.packet.format.FormatUtils;
+import dev.sequana.cyber.CostMeasuredSummaryStatistics;
+import dev.sequana.cyber.CostMeasurements;
 
 public class BasicFlow {
+    public Map<FlowFeature, CostMeasurements> featureCosts = null;
 
     private final static String separator = ",";
-    private SummaryStatistics fwdPktStats = null;
-    private SummaryStatistics bwdPktStats = null;
+    private CostMeasuredSummaryStatistics fwdPktStats = null;
+    private CostMeasuredSummaryStatistics bwdPktStats = null;
     private List<BasicPacketInfo> forward = null;
     private List<BasicPacketInfo> backward = null;
 
@@ -55,12 +58,12 @@ public class BasicFlow {
     private long endActiveTime;
     private String flowId = null;
 
-    private SummaryStatistics flowIAT = null;
-    private SummaryStatistics forwardIAT = null;
-    private SummaryStatistics backwardIAT = null;
-    private SummaryStatistics flowLengthStats = null;
-    private SummaryStatistics flowActive = null;
-    private SummaryStatistics flowIdle = null;
+    private CostMeasuredSummaryStatistics flowIAT = null;
+    private CostMeasuredSummaryStatistics forwardIAT = null;
+    private CostMeasuredSummaryStatistics backwardIAT = null;
+    private CostMeasuredSummaryStatistics flowLengthStats = null;
+    private CostMeasuredSummaryStatistics flowActive = null;
+    private CostMeasuredSummaryStatistics flowIdle = null;
 
     private long flowLastSeen;
     private long forwardLastSeen;
@@ -139,26 +142,23 @@ public class BasicFlow {
         this.firstPacket(packet);
     }
 
-    public BasicFlow(BasicPacketInfo packet, long activityTimeout) {
-        super();
-        this.activityTimeout = activityTimeout;
-        this.initParameters();
-        this.isBidirectional = true;
-        firstPacket(packet);
-    }
-
-
     public void initParameters() {
+        this.featureCosts = new HashMap<>();
+
         this.forward = new ArrayList<BasicPacketInfo>();
         this.backward = new ArrayList<BasicPacketInfo>();
-        this.flowIAT = new SummaryStatistics();
-        this.forwardIAT = new SummaryStatistics();
-        this.backwardIAT = new SummaryStatistics();
-        this.flowActive = new SummaryStatistics();
-        this.flowIdle = new SummaryStatistics();
-        this.flowLengthStats = new SummaryStatistics();
-        this.fwdPktStats = new SummaryStatistics();
-        this.bwdPktStats = new SummaryStatistics();
+        this.flowIAT = new CostMeasuredSummaryStatistics();
+        this.forwardIAT = new CostMeasuredSummaryStatistics();
+        this.backwardIAT = new CostMeasuredSummaryStatistics();
+        this.flowActive = new CostMeasuredSummaryStatistics();
+        this.flowIdle = new CostMeasuredSummaryStatistics();
+        this.flowLengthStats = new CostMeasuredSummaryStatistics();
+        this.fwdPktStats = new CostMeasuredSummaryStatistics(
+            this,
+            this.featureCosts,
+            FlowFeature.tot_fw_pkt
+        );
+        this.bwdPktStats = new CostMeasuredSummaryStatistics();
         this.flagCounts = new HashMap<String, MutableInt>();
         initFlags();
         this.forwardBytes = 0L;
@@ -206,7 +206,11 @@ public class BasicFlow {
         if (Arrays.equals(this.src, packet.getSrc())) {
             this.min_seg_size_forward = packet.getHeaderBytes();
             Init_Win_bytes_forward = packet.getTCPWindow();
-            this.fwdPktStats.addValue((double) packet.getPayloadBytes());
+            this.fwdPktStats.addValue(
+                packet,
+                "getPayloadBytes",
+                () -> ((double) packet.getPayloadBytes())
+            );
             this.fHeaderBytes = packet.getHeaderBytes();
             this.forwardLastSeen = packet.getTimeStamp();
             this.forwardBytes += packet.getPayloadBytes();
@@ -293,7 +297,11 @@ public class BasicFlow {
                 if (packet.getPayloadBytes() >= 1) {
                     this.Act_data_pkt_forward++;
                 }
-                this.fwdPktStats.addValue((double) packet.getPayloadBytes());
+                this.fwdPktStats.addValue(
+                    packet,
+                    "getPayloadBytes",
+                    () -> ((double) packet.getPayloadBytes())
+                );
                 this.fHeaderBytes += packet.getHeaderBytes();
                 this.forward.add(packet);
                 this.forwardBytes += packet.getPayloadBytes();
@@ -348,7 +356,11 @@ public class BasicFlow {
             if (packet.getPayloadBytes() >= 1) {
                 this.Act_data_pkt_forward++;
             }
-            this.fwdPktStats.addValue((double) packet.getPayloadBytes());
+            this.fwdPktStats.addValue(
+                packet,
+                "getPayloadBytes",
+                () -> ((double) packet.getPayloadBytes())
+            );
             this.flowLengthStats.addValue((double) packet.getPayloadBytes());
             this.fHeaderBytes += packet.getHeaderBytes();
             this.forward.add(packet);
@@ -704,143 +716,6 @@ public class BasicFlow {
         }
     }
 
-    public String dumpFlowBasedFeatures() {
-        String dump = "";
-        dump += this.flowId + ",";
-        dump += FormatUtils.ip(src) + ",";
-        dump += getSrcPort() + ",";
-        dump += FormatUtils.ip(dst) + ",";
-        dump += getDstPort() + ",";
-        dump += getProtocol().val + ",";
-        //dump+=this.flowStartTime+",";
-        dump += DateFormatter.parseDateFromLong(this.flowStartTime / 1000L) + ",";
-        long flowDuration = this.flowLastSeen - this.flowStartTime;
-        dump += flowDuration + ",";
-        dump += this.fwdPktStats.getN() + ",";
-        dump += this.bwdPktStats.getN() + ",";
-        dump += this.fwdPktStats.getSum() + ",";
-        dump += this.bwdPktStats.getSum() + ",";
-        if (fwdPktStats.getN() > 0L) {
-            dump += this.fwdPktStats.getMax() + ",";
-            dump += this.fwdPktStats.getMin() + ",";
-            dump += this.fwdPktStats.getMean() + ",";
-            dump += this.fwdPktStats.getStandardDeviation() + ",";
-        } else {
-            dump += "0,0,0,0,";
-        }
-        if (bwdPktStats.getN() > 0L) {
-            dump += this.bwdPktStats.getMax() + ",";
-            dump += this.bwdPktStats.getMin() + ",";
-            dump += this.bwdPktStats.getMean() + ",";
-            dump += this.bwdPktStats.getStandardDeviation() + ",";
-        } else {
-            dump += "0,0,0,0,";
-        }
-        // flow duration is in microseconds, therefore packets per seconds = packets / (duration/1000000)
-        dump += ((double) (this.forwardBytes + this.backwardBytes)) / ((double) flowDuration / 1000000L) + ",";
-        dump += ((double) packetCount()) / ((double) flowDuration / 1000000L) + ",";
-        dump += this.flowIAT.getMean() + ",";
-        dump += this.flowIAT.getStandardDeviation() + ",";
-        dump += this.flowIAT.getMax() + ",";
-        dump += this.flowIAT.getMin() + ",";
-        if (this.forward.size() > 1) {
-            dump += this.forwardIAT.getSum() + ",";
-            dump += this.forwardIAT.getMean() + ",";
-            dump += this.forwardIAT.getStandardDeviation() + ",";
-            dump += this.forwardIAT.getMax() + ",";
-            dump += this.forwardIAT.getMin() + ",";
-        } else {
-            dump += "0,0,0,0,0,";
-        }
-        if (this.backward.size() > 1) {
-            dump += this.backwardIAT.getSum() + ",";
-            dump += this.backwardIAT.getMean() + ",";
-            dump += this.backwardIAT.getStandardDeviation() + ",";
-            dump += this.backwardIAT.getMax() + ",";
-            dump += this.backwardIAT.getMin() + ",";
-        } else {
-            dump += "0,0,0,0,0,";
-        }
-
-        dump += this.fPSH_cnt + ",";
-        dump += this.bPSH_cnt + ",";
-        dump += this.fURG_cnt + ",";
-        dump += this.bURG_cnt + ",";
-
-        dump += this.fHeaderBytes + ",";
-        dump += this.bHeaderBytes + ",";
-        dump += getfPktsPerSecond() + ",";
-        dump += getbPktsPerSecond() + ",";
-
-        if (this.forward.size() > 0 || this.backward.size() > 0) {
-            dump += this.flowLengthStats.getMin() + ",";
-            dump += this.flowLengthStats.getMax() + ",";
-            dump += this.flowLengthStats.getMean() + ",";
-            dump += this.flowLengthStats.getStandardDeviation() + ",";
-            dump += flowLengthStats.getVariance() + ",";
-        } else {
-            dump += "0,0,0,0,";
-        }
-
-        for (String key : flagCounts.keySet()) {
-            dump += flagCounts.get(key).value + ",";
-        }
-
-        dump += getDownUpRatio() + ",";
-        dump += getAvgPacketSize() + ",";
-        dump += fAvgSegmentSize() + ",";
-        dump += bAvgSegmentSize() + ",";
-        dump += this.fHeaderBytes + ",";  //this feature is duplicated
-
-
-        dump += fAvgBytesPerBulk() + ",";
-        dump += fAvgPacketsPerBulk() + ",";
-        dump += fAvgBulkRate() + ",";
-        dump += fAvgBytesPerBulk() + ",";
-        dump += bAvgPacketsPerBulk() + ",";
-        dump += bAvgBulkRate() + ",";
-
-        dump += getSflow_fpackets() + ",";
-        dump += getSflow_fbytes() + ",";
-        dump += getSflow_bpackets() + ",";
-        dump += getSflow_bbytes() + ",";
-
-        dump += this.Init_Win_bytes_forward + ",";
-        dump += this.Init_Win_bytes_backward + ",";
-        dump += this.Act_data_pkt_forward + ",";
-        dump += this.Act_data_pkt_forward + ",";
-        dump += this.min_seg_size_forward + ",";
-        dump += this.min_seg_size_backward + ",";
-
-        if (this.flowActive.getN() > 0) {
-            dump += this.flowActive.getMean() + ",";
-            dump += this.flowActive.getStandardDeviation() + ",";
-            dump += this.flowActive.getMax() + ",";
-            dump += this.flowActive.getMin() + ",";
-        } else {
-            dump += "0,0,0,0,";
-        }
-
-        if (this.flowIdle.getN() > 0) {
-            dump += this.flowIdle.getMean() + ",";
-            dump += this.flowIdle.getStandardDeviation() + ",";
-            dump += this.flowIdle.getMax() + ",";
-            dump += this.flowIdle.getMin();
-        } else {
-            dump += "0,0,0,0";
-        }
-        dump += "," + getLabel();
-
-		/*if(FormatUtils.ip(src).equals("147.32.84.165") | FormatUtils.ip(dst).equals("147.32.84.165")){
-			dump+=",BOTNET";
-		}
-		else{
-			dump+=",BENIGN";
-		} */
-        /////////////////////////////////
-        return dump;
-    }
-
     public int packetCount() {
         if (isBidirectional) {
             return (this.forward.size() + this.backward.size());
@@ -979,7 +854,7 @@ public class BasicFlow {
         return flowLastSeen - flowStartTime;
     }
 
-    public long getTotalFwdPackets() {
+    public long __________________getTotalFwdPackets() {
         return fwdPktStats.getN();
     }
 
@@ -987,7 +862,7 @@ public class BasicFlow {
         return bwdPktStats.getN();
     }
 
-    public double getTotalLengthofFwdPackets() {
+    public double ________________getTotalLengthofFwdPackets() {
         return fwdPktStats.getSum();
     }
 
@@ -995,19 +870,19 @@ public class BasicFlow {
         return bwdPktStats.getSum();
     }
 
-    public double getFwdPacketLengthMax() {
+    public double ______________getFwdPacketLengthMax() {
         return (fwdPktStats.getN() > 0L) ? fwdPktStats.getMax() : 0;
     }
 
-    public double getFwdPacketLengthMin() {
+    public double ______________getFwdPacketLengthMin() {
         return (fwdPktStats.getN() > 0L) ? fwdPktStats.getMin() : 0;
     }
 
-    public double getFwdPacketLengthMean() {
+    public double ______________getFwdPacketLengthMean() {
         return (fwdPktStats.getN() > 0L) ? fwdPktStats.getMean() : 0;
     }
 
-    public double getFwdPacketLengthStd() {
+    public double ______________getFwdPacketLengthStd() {
         return (fwdPktStats.getN() > 0L) ? fwdPktStats.getStandardDeviation() : 0;
     }
 
@@ -1036,7 +911,7 @@ public class BasicFlow {
         return ((double) packetCount()) / ((double) getFlowDuration() / 1000000L);
     }
 
-    public SummaryStatistics getFlowIAT() {
+    public CostMeasuredSummaryStatistics getFlowIAT() {
         return flowIAT;
     }
 
@@ -1237,6 +1112,7 @@ public class BasicFlow {
     }
 
     public String dumpFlowBasedFeaturesEx() {
+        // Currently used.
         StringBuilder dump = new StringBuilder();
 
         dump.append(flowId).append(separator);                                        //1
@@ -1251,8 +1127,7 @@ public class BasicFlow {
 
         long flowDuration = flowLastSeen - flowStartTime;
         dump.append(flowDuration).append(separator);                                //8
-
-        dump.append(fwdPktStats.getN()).append(separator);                            //9
+        dump.append(fwdPktStats.getN(FlowFeature.tot_fw_pkt)).append(separator);
         dump.append(bwdPktStats.getN()).append(separator);                            //10
         dump.append(fwdPktStats.getSum()).append(separator);                        //11
         dump.append(bwdPktStats.getSum()).append(separator);                        //12
