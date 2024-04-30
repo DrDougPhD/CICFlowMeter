@@ -1127,7 +1127,7 @@ public class BasicFlow {
 
         long flowDuration = flowLastSeen - flowStartTime;
         dump.append(flowDuration).append(separator);                                //8
-        dump.append(fwdPktStats.getN(FlowFeature.tot_fw_pkt)).append(separator);                            //9
+        dump.append(fwdPktStats.getN(FlowFeature.tot_fw_pkt)).append(separator);
         dump.append(bwdPktStats.getN()).append(separator);                            //10
         dump.append(fwdPktStats.getSum()).append(separator);                        //11
         dump.append(bwdPktStats.getSum()).append(separator);                        //12
