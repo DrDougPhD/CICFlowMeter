@@ -154,6 +154,7 @@ public class BasicFlow {
         this.flowIdle = new CostMeasuredSummaryStatistics();
         this.flowLengthStats = new CostMeasuredSummaryStatistics();
         this.fwdPktStats = new CostMeasuredSummaryStatistics(
+            this,
             this.featureCosts,
             FlowFeature.tot_fw_pkt
         );
@@ -205,8 +206,11 @@ public class BasicFlow {
         if (Arrays.equals(this.src, packet.getSrc())) {
             this.min_seg_size_forward = packet.getHeaderBytes();
             Init_Win_bytes_forward = packet.getTCPWindow();
-            this.fwdPktStats.startMeasuring()
-                .addValue((double) packet.getPayloadBytes());
+            this.fwdPktStats.addValue(
+                packet,
+                "getPayloadBytes",
+                () -> ((double) packet.getPayloadBytes())
+            );
             this.fHeaderBytes = packet.getHeaderBytes();
             this.forwardLastSeen = packet.getTimeStamp();
             this.forwardBytes += packet.getPayloadBytes();
@@ -293,8 +297,11 @@ public class BasicFlow {
                 if (packet.getPayloadBytes() >= 1) {
                     this.Act_data_pkt_forward++;
                 }
-                this.fwdPktStats.startMeasuring()
-                    .addValue((double) packet.getPayloadBytes());
+                this.fwdPktStats.addValue(
+                    packet,
+                    "getPayloadBytes",
+                    () -> ((double) packet.getPayloadBytes())
+                );
                 this.fHeaderBytes += packet.getHeaderBytes();
                 this.forward.add(packet);
                 this.forwardBytes += packet.getPayloadBytes();
@@ -349,8 +356,11 @@ public class BasicFlow {
             if (packet.getPayloadBytes() >= 1) {
                 this.Act_data_pkt_forward++;
             }
-            this.fwdPktStats.startMeasuring()
-                .addValue((double) packet.getPayloadBytes());
+            this.fwdPktStats.addValue(
+                packet,
+                "getPayloadBytes",
+                () -> ((double) packet.getPayloadBytes())
+            );
             this.flowLengthStats.addValue((double) packet.getPayloadBytes());
             this.fHeaderBytes += packet.getHeaderBytes();
             this.forward.add(packet);
@@ -844,7 +854,7 @@ public class BasicFlow {
         return flowLastSeen - flowStartTime;
     }
 
-    public long getTotalFwdPackets() {
+    public long __________________getTotalFwdPackets() {
         return fwdPktStats.getN();
     }
 
@@ -852,7 +862,7 @@ public class BasicFlow {
         return bwdPktStats.getN();
     }
 
-    public double getTotalLengthofFwdPackets() {
+    public double ________________getTotalLengthofFwdPackets() {
         return fwdPktStats.getSum();
     }
 
@@ -860,19 +870,19 @@ public class BasicFlow {
         return bwdPktStats.getSum();
     }
 
-    public double getFwdPacketLengthMax() {
+    public double ______________getFwdPacketLengthMax() {
         return (fwdPktStats.getN() > 0L) ? fwdPktStats.getMax() : 0;
     }
 
-    public double getFwdPacketLengthMin() {
+    public double ______________getFwdPacketLengthMin() {
         return (fwdPktStats.getN() > 0L) ? fwdPktStats.getMin() : 0;
     }
 
-    public double getFwdPacketLengthMean() {
+    public double ______________getFwdPacketLengthMean() {
         return (fwdPktStats.getN() > 0L) ? fwdPktStats.getMean() : 0;
     }
 
-    public double getFwdPacketLengthStd() {
+    public double ______________getFwdPacketLengthStd() {
         return (fwdPktStats.getN() > 0L) ? fwdPktStats.getStandardDeviation() : 0;
     }
 
@@ -1117,7 +1127,7 @@ public class BasicFlow {
 
         long flowDuration = flowLastSeen - flowStartTime;
         dump.append(flowDuration).append(separator);                                //8
-        dump.append(fwdPktStats.getN()).append(separator);                            //9
+        dump.append(fwdPktStats.getN(FlowFeature.tot_fw_pkt)).append(separator);                            //9
         dump.append(bwdPktStats.getN()).append(separator);                            //10
         dump.append(fwdPktStats.getSum()).append(separator);                        //11
         dump.append(bwdPktStats.getSum()).append(separator);                        //12
