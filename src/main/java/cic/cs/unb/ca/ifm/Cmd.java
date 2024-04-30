@@ -194,7 +194,33 @@ public class Cmd {
         //logger.info("{} is done,Total {} flows",inputFile,singleTotal);
         //System.out.println(String.format("%s is done,Total %d flows", inputFile, singleTotal));
     }
+    private String flowID;
+    // private Map<String, CostMeasurements> featureOperations;
 
+    // public FlowCost(BasicFlow flow) {
+    //     this.flowID = flow.getFlowId();
+
+    //     // Initialize this map to account for the number of features it is expected to track.
+    //     this.featureOperations = new HashMap<>(flow.featureCosts.size());
+    //     for (FlowFeature feature : flow.featureCosts.keySet()) {
+    //         this.featureOperations.put(
+    //             feature.getName(),
+    //             flow.featureCosts.get(feature)
+    //         );
+    //     }
+    // }
+
+    // public static Float summarize(FlowCost record, String featureName) {
+    //     // Summation of all values associated with this flow's field.
+    //     // Get the list of operations performed for that feature.
+    //     // Sum up the costs accumulated over those operations.
+
+    //     return (float) 0.0;
+    // }
+
+    // public static String get(FlowCost record, String field) {
+    //     return "";
+    // }
     static class FlowListener implements FlowGenListener {
 
         private String fileName;
