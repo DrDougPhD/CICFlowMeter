@@ -145,8 +145,8 @@ public class BasicFlow {
     public void initParameters() {
         this.featureCosts = new HashMap<>();
 
-        this.forward = new ArrayList<BasicPacketInfo>();
-        this.backward = new ArrayList<BasicPacketInfo>();
+        this.forward = new LinkedList<>();
+        this.backward = new LinkedList<>();
         this.flowIAT = new CostMeasuredSummaryStatistics();
         this.forwardIAT = new CostMeasuredSummaryStatistics();
         this.backwardIAT = new CostMeasuredSummaryStatistics();
