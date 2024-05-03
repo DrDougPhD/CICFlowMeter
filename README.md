@@ -26,6 +26,25 @@ FIN packets, which is more in line with the TCP specification.
 
 - The values for *Fwd PSH Flags*, *Bwd PSH Flags*, *Fwd URG Flags* and *Bwd URG Flags* are now correctly incremented.
 
-### Running the tool
+## Running the tool
 
-To run the tool, please refer to the [original CICFlowMeter repository](https://github.com/ahlashkari/CICFlowMeter) for instructions.
+### Docker Container
+To use the tool inside a Docker container, follow these steps:
+
+1. Set Up Directories:
+     - Create a directory at `/path/to/pcap`.
+     - Inside this directory, make two subfolders: 
+       - `input` (for your input files)
+       - `output` (where the tool will save its results).
+2. Build the image or use the pre-built image from [Docker Hub](https://hub.docker.com/r/mielverkerken/cicflowmeter):
+    ```bash
+    docker build -t cicflowmeter .
+    ```
+2. Run the Docker Command:
+    ```bash
+    docker run -v /path/to/pcap:/tmp/pcap cicflowmeter /tmp/pcap/input /tmp/pcap/output
+    ```
+    This command mounts your local /path/to/pcap directory to /tmp/pcap inside the Docker container and then runs the tool on the input, saving results to the output directory.
+
+### Local
+To run the tool locally, please refer to the [original CICFlowMeter repository](https://github.com/ahlashkari/CICFlowMeter) for instructions.
