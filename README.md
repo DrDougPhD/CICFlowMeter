@@ -36,7 +36,7 @@ To use the tool inside a Docker container, follow these steps:
      - Inside this directory, make two subfolders: 
        - `input` (for your input files)
        - `output` (where the tool will save its results).
-2. Build the image or use the pre-built image from [Docker Hub](https://hub.docker.com/r/mielverkerken/cicflowmeter):
+2. Build the image.
     ```bash
     docker build -t cicflowmeter .
     ```
